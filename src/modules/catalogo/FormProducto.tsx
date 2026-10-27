@@ -30,29 +30,35 @@ interface Errores {
 export function FormProducto({
   producto,
   costoServicio,
+  inicial,
   alGuardar,
+  alCrear,
 }: {
   producto?: Producto;
   costoServicio?: string | null;
+  /** Valores sugeridos para un producto nuevo (por ejemplo, de una factura del SRI). */
+  inicial?: { nombre?: string; codigoIva?: string; codigoPrincipal?: string; precio?: string };
   alGuardar?: () => void;
+  /** Si se da, al crear se llama en vez de ir a la ficha del producto. */
+  alCrear?: (id: string) => void;
 }) {
   const editando = Boolean(producto);
   const categorias = useCategorias();
   const guardar = useGuardarProducto();
   const crearCategoria = useGuardarCategoria();
 
-  const [nombre, setNombre] = useState(producto?.nombre ?? '');
+  const [nombre, setNombre] = useState(producto?.nombre ?? inicial?.nombre ?? '');
   const [categoriaId, setCategoriaId] = useState(producto?.categoria_id ?? '');
   const [unidad, setUnidad] = useState<'UND' | 'KG'>(producto?.unidad_base ?? 'UND');
-  const [codigoIva, setCodigoIva] = useState(producto?.codigo_iva ?? '4');
-  const [codigoPrincipal, setCodigoPrincipal] = useState(producto?.codigo_principal ?? '');
+  const [codigoIva, setCodigoIva] = useState(producto?.codigo_iva ?? inicial?.codigoIva ?? '4');
+  const [codigoPrincipal, setCodigoPrincipal] = useState(producto?.codigo_principal ?? inicial?.codigoPrincipal ?? '');
   const [codigoAuxiliar, setCodigoAuxiliar] = useState(producto?.codigo_auxiliar ?? '');
   const [informacion, setInformacion] = useState(producto?.informacion_adicional ?? '');
   const [stockMinimo, setStockMinimo] = useState(producto ? paraEditar(producto.stock_minimo) : '0');
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? true);
   const [costo, setCosto] = useState(costoServicio ? paraEditar(costoServicio) : '');
-  const [precio, setPrecio] = useState('');
+  const [precio, setPrecio] = useState(inicial?.precio ?? '');
   const [codigo, setCodigo] = useState('');
   const [nuevaCategoria, setNuevaCategoria] = useState<string | null>(null);
   const [errores, setErrores] = useState<Errores>({});
@@ -102,7 +108,8 @@ export function FormProducto({
           if (editando) {
             setGuardado(true);
             alGuardar?.();
-          } else navegar({ nombre: 'producto', id });
+          } else if (alCrear) alCrear(id);
+          else navegar({ nombre: 'producto', id });
         },
       },
     );

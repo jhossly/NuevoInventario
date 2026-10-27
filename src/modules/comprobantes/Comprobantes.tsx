@@ -1,11 +1,14 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
+import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { useProductos } from '@/modules/catalogo/api';
+import { useContexto } from '@/modules/sesion/sesion';
 import { formatearMomento } from '@/modules/ventas/api';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { Aviso, AvisoError, Boton, Cargando, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import {
+  presentacionBaseDe,
   useAsociarLinea,
   useCandidatos,
   useComprobantes,
@@ -14,7 +17,25 @@ import {
   useImportar,
   useVincular,
   type Comprobante,
+  type LineaComprobante,
 } from './api';
+
+/**
+ * Datos que trae una línea de la factura para el formulario de producto. El
+ * precio del XML es sin IVA; si los precios de la bodega lo incluyen, se
+ * sugiere con IVA (es solo una sugerencia que el Dueño revisa).
+ */
+function sugerencia(l: LineaComprobante, preciosIncluyenIva: boolean) {
+  const tarifa = Number(l.tarifa_iva);
+  const codigoIva = ({ 0: '0', 5: '5', 15: '4' } as Record<number, string>)[tarifa];
+  const precio = Number(l.precio_unitario) * (preciosIncluyenIva ? 1 + tarifa / 100 : 1);
+  return {
+    nombre: l.descripcion,
+    codigoIva,
+    codigoPrincipal: l.codigo && l.codigo.length <= 25 ? l.codigo : undefined,
+    precio: precio.toFixed(2).replace('.', ','),
+  };
+}
 
 const lineasSinProducto = (n: number) => (n === 1 ? '1 línea sin producto' : `${n} líneas sin producto`);
 
@@ -145,6 +166,21 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
   const vincular = useVincular();
   const crear = useCrearVenta();
   const descartar = useDescartar();
+  const contexto = useContexto();
+  // Línea cuyo formulario de producto nuevo está abierto.
+  const [creando, setCreando] = useState<string | null>(null);
+  const [errorNuevo, setErrorNuevo] = useState(false);
+
+  const asociarNuevo = async (lineaId: string, productoId: string) => {
+    setErrorNuevo(false);
+    try {
+      const presentacionId = await presentacionBaseDe(productoId);
+      await asociar.mutateAsync({ lineaId, presentacionId });
+      setCreando(null);
+    } catch {
+      setErrorNuevo(true);
+    }
+  };
 
   const opciones = useMemo(
     () =>
@@ -180,20 +216,43 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
                   : ''}
               </span>
             ) : (
-              <div className="w-64">
-                <Selector
-                  etiqueta="¿Qué producto es?"
-                  value=""
-                  disabled={asociar.isPending}
-                  onChange={(e) => e.target.value && asociar.mutate({ lineaId: l.id, presentacionId: e.target.value })}
-                >
-                  <option value="">Elegir…</option>
-                  {opciones.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.texto}
-                    </option>
-                  ))}
-                </Selector>
+              <div className="flex items-end gap-2">
+                <div className="w-64">
+                  <Selector
+                    etiqueta="¿Qué producto es?"
+                    value=""
+                    disabled={asociar.isPending}
+                    onChange={(e) => e.target.value && asociar.mutate({ lineaId: l.id, presentacionId: e.target.value })}
+                  >
+                    <option value="">Elegir…</option>
+                    {opciones.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.texto}
+                      </option>
+                    ))}
+                  </Selector>
+                </div>
+                <Boton variante="secundario" onClick={() => setCreando(creando === l.id ? null : l.id)}>
+                  {creando === l.id ? 'Cancelar' : 'Crear producto'}
+                </Boton>
+              </div>
+            )}
+            {creando === l.id && !l.presentacion_id && (
+              <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <h4 className="mb-2 font-semibold">Nuevo producto desde la factura</h4>
+                <p className="mb-3 text-gray-600">
+                  Revisa los datos que trae la factura. Al crearlo, esta línea y las próximas con el código{' '}
+                  {l.codigo ?? '—'} quedan asociadas.
+                </p>
+                <FormProducto
+                  inicial={sugerencia(l, contexto.precios_incluyen_iva)}
+                  alCrear={(productoId) => asociarNuevo(l.id, productoId)}
+                />
+                {errorNuevo && (
+                  <p className="mt-2 text-red-700">
+                    El producto se creó, pero no se pudo asociar: elígelo en «¿Qué producto es?».
+                  </p>
+                )}
               </div>
             )}
           </li>

@@ -10,6 +10,8 @@ export const esquemaLinea = z.object({
   codigo: z.string().nullable(),
   descripcion: z.string(),
   cantidad: decimal,
+  precio_unitario: decimal,
+  tarifa_iva: decimal,
   base: decimal,
   iva: decimal,
   presentacion_id: uuid.nullable(),
@@ -37,6 +39,7 @@ export const esquemaCandidato = z.object({
 });
 
 export type Comprobante = z.infer<typeof esquemaComprobante>;
+export type LineaComprobante = z.infer<typeof esquemaLinea>;
 export type Candidato = z.infer<typeof esquemaCandidato>;
 
 const claves = {
@@ -53,7 +56,8 @@ export function useComprobantes() {
           .from('comprobantes')
           .select(
             'id,numero,fecha_emision,razon_social_comprador,identificacion_comprador,total:total::text,venta_id,vinculo,' +
-              'comprobante_lineas(id,orden,codigo,descripcion,cantidad:cantidad::text,base:base::text,iva:iva::text,' +
+              'comprobante_lineas(id,orden,codigo,descripcion,cantidad:cantidad::text,precio_unitario:precio_unitario::text,' +
+              'tarifa_iva:tarifa_iva::text,base:base::text,iva:iva::text,' +
               'presentacion_id,presentaciones(nombre,productos(nombre)))',
           )
           .order('fecha_emision', { ascending: false })
@@ -139,4 +143,15 @@ export function useDescartar() {
       llamar('descartar_comprobante', { p_comprobante_id: comprobanteId }, z.object({ comprobante_id: uuid })),
     onSuccess: invalidar,
   });
+}
+
+/** Presentación base (factor 1) del producto recién creado desde una línea. */
+export async function presentacionBaseDe(productoId: string): Promise<string> {
+  const filas = await consultar(
+    supabase.from('presentaciones').select('id').eq('producto_id', productoId).eq('factor', 1).limit(1),
+    z.array(z.object({ id: uuid })),
+  );
+  const id = filas[0]?.id;
+  if (!id) throw new Error('El producto no tiene presentación base');
+  return id;
 }
