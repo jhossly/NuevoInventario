@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-30 (Fase 8: ventas listas y probadas en local; falta CI)
+Última actualización: 2026-10-30 (Fase 8 cerrada: ventas probadas en local y en CI, con concurrencia)
 
 ---
 
@@ -43,7 +43,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
-| 8. Ventas | Base de datos e interfaz probadas en local (195/195 pgTAP, 2 pruebas de concurrencia, navegador); **falta subir y CI** |
+| 8. Ventas | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 9. Caja y fiado | Siguiente |
 
 ## Migraciones
@@ -83,6 +83,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-29 | Navegador integrado, celular, datos del seed | Dueño: compra de 2 cajas de aceite con factura `1-1-456` (vista previa $55,20 + $8,28 = $63,48; 24 u a $2,645; stock 34 a $2,455294), anulación con motivo, lista con «anulada». Vendedor: Compras bloqueado y sin menú | **Todo funciona**; las llamadas de la app responden 200 |
 | 2026-10-30 | Windows 11 del usuario: Supabase local | `004_ventas` (63: Fase 3 y HU-02/HU-03, descuento, precios sin IVA, stock, idempotencia, pagos, comprobante, Vendedor, devoluciones que cuadran, anulación, inmutabilidad, aislamiento) | **195/195 pasan**. Mutación: sin tope de descuento → falla C5; última devolución proporcional → falla D15 |
 | 2026-10-30 | Windows 11 del usuario: `npm run db:test:concurrencia` (dos conexiones) | 1) última unidad vendida a la vez; 2) dos «Cobrar» simultáneos con la misma clave | **2/2 pasan**. Sin bloqueo de fila ni insert previo, la 1 falla (DATOS_INVALIDOS en vez de STOCK_INSUFICIENTE) |
+| 2026-10-30 | GitHub Actions, run 40577693759, commit `ba6ea62` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + `venta_ultima_unidad.sh` (dos conexiones) | **Pasan todos los pasos**, también la concurrencia |
 | 2026-10-30 | Navegador, 1200 px, datos del seed | Vendedor: buscar + Enter, escanear código, queso 1,25 kg, total $13,45, descuento rechazado (tope 0 %), vuelto $6,55, doble clic en «Cobrar» → una venta, pedir anulación. Dueño: costo y utilidad, anular, vender 3 Colas escaneando y devolver 1 | **Todo funciona**. Se encontró y corrigió: el doble clic mostraba «El registro ya existe» (la venta sí era una sola) |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
@@ -124,7 +125,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de ventas (`git push`) y confirmar el CI (incluye ahora la prueba de concurrencia).
-2. Fase 9: caja (apertura, cierre, diferencia; `ventas.caja_id`) y fiado (cuentas por cobrar, límite, abonos, pago FIADO y reintegro ABONO_FIADO).
-3. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
-4. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
+1. Fase 9: caja (apertura, cierre, diferencia; `ventas.caja_id`) y fiado (cuentas por cobrar, límite, abonos, pago FIADO y reintegro ABONO_FIADO).
+2. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
+3. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
