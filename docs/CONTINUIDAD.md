@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-28 (Fase 6: base de datos de catálogo e inventario lista, probada en local y en CI)
+Última actualización: 2026-10-28 (Fase 6 completa en local: base de datos e interfaz de catálogo e inventario)
 
 ---
 
@@ -41,7 +41,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 3. Modelo de datos | Aprobada |
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
-| 6. Productos e inventario | Base de datos lista (86/86 pgTAP en local, CI en verde); **faltan las pantallas** |
+| 6. Productos e inventario | Base de datos e interfaz listas y probadas en local; **falta subir y confirmar el CI de la interfaz** |
 | 7. Compras | Siguiente (base de datos) |
 
 ## Migraciones
@@ -50,6 +50,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | --- | --- |
 | `20261027000000_base_seguridad.sql` | Esquema `privado`, `empresas`, `perfiles`, `membresias`, `auditoria`, `mi_empresa()`, `mi_rol()`, `privado.ok()`/`privado.error()`, trigger de solo inserción, permisos y RLS, función `mi_contexto()` |
 | `20261028000000_catalogo_inventario.sql` | `categorias`, `productos`, `presentaciones`, `movimientos_inventario` (inmutable, con `secuencia`), `existencias` (costos ocultos por columna, D-020), `conteos`, `conteo_detalles` (congelados al confirmar). Motor `privado.registrar_movimiento` (promedio ponderado, bloqueo de fila, `STOCK_INSUFICIENTE`). `privado.fallar()` (errores de negocio con SQLSTATE `NG001`) y `privado.ve_costos()`. Expuestas: `guardar_categoria`, `eliminar_categoria`, `guardar_producto`, `guardar_presentacion`, `ajustar_inventario`, `inventario_valorizado`, `guardar_conteo`, `confirmar_conteo` |
+
+Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/shared/ruta.ts`); toda lectura pasa por `consultar()` y toda escritura por `llamar()` (`src/lib/datos.ts`), con Zod sobre cada respuesta. Pantallas: lista de productos con búsqueda sin tildes y bajo stock, ficha con presentaciones, alta y edición de producto, ajuste (apertura, ajuste ±, merma) con clave de idempotencia por intento, kardex (solo quien ve costos) y conteo con borrador. Los números escritos se leen con `leerDecimal` (acepta coma, no redondea).
 
 `supabase/seed.sql` (solo local): empresa «Bodega de Prueba», usuarios `dueno@bodega.test` y `vendedor@bodega.test` (contraseña en el propio archivo), 4 categorías, 6 productos con 2 presentaciones cada uno y stock inicial cargado con las funciones públicas. Para la Fase 7, el motor ya acepta COMPRA, VENTA, DEVOLUCION_VENTA y ANULACION_VENTA: compras y ventas solo deben llamarlo.
 
@@ -65,6 +67,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 2026-10-27 | GitHub Actions, run 40543041246, commit `0a00ce6` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» (`.github/workflows/pruebas.yml`) | **Pasan los dos** |
 | 2026-10-28 | Windows 11 del usuario: Supabase local, después de `db reset` con seed | `001_seguridad_base` (24) + `002_catalogo_inventario` (62: kardex del aceite fila por fila, reglas, idempotencia, redondeo, Vendedor sin costos, aislamiento, libro inmutable) | **86/86 pasan**. Prueba de mutación: con la salida al último costo y `existencias` sin permiso por columna, fallan 7/62 como se espera |
 | 2026-10-28 | GitHub Actions, run 40547661672, commit `e3bfa8d` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la migración `catalogo_inventario` | **Pasan los dos** |
+| 2026-10-28 | Windows 11 del usuario: Vitest | 6 archivos: `formato`, `respuesta`, `env`, `rpc`, `decimal`, `ruta` (incluye `nuevaClave`) | **40/40 pasan**; typecheck y build pasan (aviso: JS > 500 kB) |
+| 2026-10-28 | Navegador integrado, app local en celular (375×812), datos del seed | Dueño: ingreso, lista con valorizado, merma (stock 10 → 9), merma mayor al stock (`No hay stock suficiente`), kardex, conteo con borrador que sobrevive a recargar y confirmación (queso 8,5 → 8,2; fósforos sin cambio), alta de producto con error de 3 decimales en el precio, presentación «Paquete 4», apertura. Vendedor: lista sin costos, ficha sin edición, ajuste bloqueado | **Todo funciona**; sin errores en consola |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
@@ -95,8 +99,10 @@ Ninguno abierto. Resueltos:
 - La concurrencia (dos ventas de la última unidad a la vez) depende de `select … for update` en `existencias`; pgTAP corre en una sola sesión y no la prueba. Probarla con dos conexiones en la Fase 7, cuando exista `registrar_venta`.
 - `existencias_cantidad_no_negativa` impide stock negativo; si el dueño activa `permitir_venta_sin_stock` (D-004), habrá que quitar esa restricción en una migración.
 - La interfaz debe pedir columnas explícitas de `existencias`: `select *` falla por el permiso por columna (D-020).
+- El paquete JS pesa más de 500 kB (supabase-js + zod + React). Dividirlo por pantallas cuando lleguen ventas y caja.
+- Sin pruebas automáticas de componentes React (no hay jsdom ni Testing Library): las pantallas se probaron a mano en el navegador. Reevaluar en la Fase 8 (D-018).
 
 ## Próximas tareas
 
-1. Fase 6, interfaz: módulos `src/modules/catalogo` e `inventario` (esquemas Zod de las respuestas, lista de productos con stock, alta y edición de productos y presentaciones, ajustes y conteo desde el celular).
+1. Subir los commits de la interfaz (`git push`) y confirmar que el CI pasa.
 2. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatearCantidad, formatearDinero, formatearPorcentaje } from './formato';
+import { formatearCantidad, formatearCosto, formatearDinero, formatearPorcentaje } from './formato';
 
 // Intl puede usar espacios especiales (U+00A0, U+202F) entre símbolo y número
 // según la versión de ICU. Los normalizamos para que la prueba sea estable.
@@ -23,6 +23,16 @@ describe('formatearDinero', () => {
   it('rechaza valores no finitos', () => {
     expect(() => formatearDinero(Number.NaN)).toThrow();
     expect(() => formatearDinero(Number.POSITIVE_INFINITY)).toThrow();
+  });
+});
+
+describe('formatearCosto', () => {
+  it('muestra los 6 decimales del costo promedio del kardex del aceite', () => {
+    expect(normalizar(formatearCosto('2.455294'))).toMatch(/2,455294/);
+  });
+
+  it('no rellena con ceros más allá de dos decimales', () => {
+    expect(normalizar(formatearCosto('2.000000'))).toMatch(/2,00$/);
   });
 });
 

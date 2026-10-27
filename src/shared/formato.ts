@@ -17,6 +17,14 @@ const formatoDinero = new Intl.NumberFormat('es-EC', {
   maximumFractionDigits: 2,
 });
 
+// Costos unitarios y valores de inventario se guardan con 6 decimales (D-010).
+const formatoCosto = new Intl.NumberFormat('es-EC', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 6,
+});
+
 const formatoCantidad = new Intl.NumberFormat('es-EC', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 3,
@@ -46,6 +54,11 @@ function aNumeroParaMostrar(valor: string | number): number {
 /** "7.5" → "$7,50" (separadores según es-EC). */
 export function formatearDinero(valor: string | number): string {
   return formatoDinero.format(aNumeroParaMostrar(valor));
+}
+
+/** "2.455294" → "$2,455294"; "2.000000" → "$2,00". Hasta 6 decimales. */
+export function formatearCosto(valor: string | number): string {
+  return formatoCosto.format(aNumeroParaMostrar(valor));
 }
 
 /** "1.250" → "1,25"; "24" → "24". Hasta 3 decimales (gramos). */

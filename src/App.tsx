@@ -1,30 +1,102 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { FichaProducto } from '@/modules/catalogo/FichaProducto';
+import { FormProducto } from '@/modules/catalogo/FormProducto';
+import { ListaProductos } from '@/modules/catalogo/ListaProductos';
+import { Conteo } from '@/modules/inventario/Conteo';
+import { PantallaAjuste } from '@/modules/inventario/FormAjuste';
+import { Kardex } from '@/modules/inventario/Kardex';
+import { PantallaIngreso } from '@/modules/sesion/PantallaIngreso';
+import { cerrarSesion, useSesion, type Contexto } from '@/modules/sesion/sesion';
+import { enlace, useRuta, type Ruta } from '@/shared/ruta';
+import { Aviso, Boton, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
 
-/**
- * Pantalla temporal de la Fase 5: solo comprueba que la app llega a Supabase.
- * El inicio de sesión y los módulos llegan en las Fases 6 a 8.
- */
 export function App() {
-  const conexion = useQuery({
-    queryKey: ['salud-conexion'],
-    queryFn: async () => {
-      // Sin sesión, la política correcta es NO devolver datos: un error de
-      // permisos aquí confirma que la seguridad está activa.
-      const { error } = await supabase.rpc('mi_contexto');
-      return error ? `Conectado; acceso protegido (${error.code ?? 'sin código'})` : 'Conectado';
-    },
-  });
+  const sesion = useSesion();
 
+  switch (sesion.estado) {
+    case 'cargando':
+      return <Cargando />;
+    case 'sin-sesion':
+      return <PantallaIngreso />;
+    case 'sin-empresa':
+      return (
+        <main className="mx-auto max-w-md p-4">
+          <Aviso>
+            La cuenta {sesion.correo} no tiene acceso a ninguna bodega, o fue desactivada. Pide al Dueño que te invite.
+          </Aviso>
+          <Boton variante="secundario" className="mt-4" onClick={() => void cerrarSesion()}>
+            Salir
+          </Boton>
+        </main>
+      );
+    case 'error':
+      return (
+        <main className="mx-auto max-w-md p-4">
+          <Aviso>No se pudo cargar tu cuenta: {sesion.mensaje}</Aviso>
+          <Boton variante="secundario" className="mt-4" onClick={() => window.location.reload()}>
+            Reintentar
+          </Boton>
+        </main>
+      );
+    case 'lista':
+      return <Marco contexto={sesion.contexto} correo={sesion.correo} />;
+  }
+}
+
+function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
+  const ruta = useRuta();
   return (
-    <main className="mx-auto max-w-md p-4">
-      <h1 className="text-2xl font-semibold">Bodega</h1>
-      <p className="mt-2 text-gray-600">Fase 5: entorno de desarrollo.</p>
-      <p className="mt-4 rounded-lg border border-gray-300 bg-white p-3" role="status">
-        {conexion.isPending && 'Comprobando conexión…'}
-        {conexion.isError && `Sin conexión: ${(conexion.error as Error).message}`}
-        {conexion.isSuccess && conexion.data}
-      </p>
-    </main>
+    <div className="min-h-dvh">
+      <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-2">
+          <a href={enlace({ nombre: 'productos' })} className="flex-1 truncate font-semibold">
+            {contexto.nombre}
+          </a>
+          <span className="hidden text-sm text-gray-500 sm:inline">
+            {correo} · {contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}
+          </span>
+          <Boton variante="secundario" onClick={() => void cerrarSesion()}>
+            Salir
+          </Boton>
+        </div>
+      </nav>
+      <main className="mx-auto max-w-3xl p-4">
+        <Pantalla ruta={ruta} esDueno={contexto.rol === 'DUENO'} />
+      </main>
+    </div>
   );
+}
+
+function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
+  // La base rechaza igual cualquier escritura del Vendedor; esto solo evita
+  // mostrarle formularios que no puede usar.
+  const soloDueno = (contenido: JSX.Element) =>
+    esDueno ? contenido : <Tarjeta>Esta pantalla es solo para el Dueño.</Tarjeta>;
+
+  switch (ruta.nombre) {
+    case 'productos':
+      return <ListaProductos />;
+    case 'producto-nuevo':
+      return soloDueno(
+        <>
+          <Encabezado titulo="Nuevo producto" volver={enlace({ nombre: 'productos' })} />
+          <Tarjeta>
+            <FormProducto />
+          </Tarjeta>
+        </>,
+      );
+    case 'producto':
+      return <FichaProducto id={ruta.id} />;
+    case 'ajuste':
+      return soloDueno(<PantallaAjuste id={ruta.id} />);
+    case 'kardex':
+      return <Kardex id={ruta.id} />;
+    case 'conteo':
+      return soloDueno(<Conteo />);
+    case 'no-encontrada':
+      return (
+        <Tarjeta>
+          Esta página no existe. <a href={enlace({ nombre: 'productos' })} className="underline">Ir a productos</a>
+        </Tarjeta>
+      );
+  }
 }
