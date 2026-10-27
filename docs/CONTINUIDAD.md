@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-29 (Fase 7: compras listas y probadas en local; falta CI)
+Última actualización: 2026-10-29 (Fase 7 cerrada: compras probadas en local y en CI)
 
 ---
 
@@ -42,7 +42,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
-| 7. Compras | Base de datos e interfaz probadas en local (132/132 pgTAP, navegador); **falta subir y CI** |
+| 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 8. Ventas | Siguiente |
 
 ## Migraciones
@@ -75,6 +75,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-28 | Navegador integrado, app local en celular (375×812), datos del seed | Dueño: ingreso, lista con valorizado, merma (stock 10 → 9), merma mayor al stock (`No hay stock suficiente`), kardex, conteo con borrador que sobrevive a recargar y confirmación (queso 8,5 → 8,2; fósforos sin cambio), alta de producto con error de 3 decimales en el precio, presentación «Paquete 4», apertura. Vendedor: lista sin costos, ficha sin edición, ajuste bloqueado | **Todo funciona**; sin errores en consola |
 | 2026-10-28 | GitHub Actions, run 40550743078, commit `c644f24` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la interfaz de la Fase 6 | **Pasan los dos** |
 | 2026-10-29 | Windows 11 del usuario: Supabase local | `003_compras` (46: Fase 3 y HU-01, descuento antes del IVA, IVA como costo o no, libra → kg, respaldo, documento repetido y normalizado, idempotencia, fecha futura, todo o nada, anulación al promedio y su límite, inmutabilidad, permisos) | **132/132 pasan** (24 + 62 + 46). Mutación: IVA sin restar el descuento y compra anulada que vuelve a confirmarse → fallan C3 e I4 |
+| 2026-10-29 | GitHub Actions, run 40553769987, commit `3aa9844` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la migración de compras | **Pasan los dos** |
 | 2026-10-29 | Navegador integrado, celular, datos del seed | Dueño: compra de 2 cajas de aceite con factura `1-1-456` (vista previa $55,20 + $8,28 = $63,48; 24 u a $2,645; stock 34 a $2,455294), anulación con motivo, lista con «anulada». Vendedor: Compras bloqueado y sin menú | **Todo funciona**; las llamadas de la app responden 200 |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
@@ -111,6 +112,5 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de compras (`git push`) y confirmar el CI.
-2. Fase 8: ventas de mostrador (`clientes`, `ventas`, `venta_detalles`, `registrar_venta` con precios con IVA incluido, bloqueo sin stock, costo de venta copiado), anulaciones y devoluciones; prueba de dos ventas simultáneas de la última unidad con dos conexiones.
-3. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
+1. Fase 8: ventas de mostrador (`clientes`, `ventas`, `venta_detalles`, `registrar_venta` con precios con IVA incluido, bloqueo sin stock, costo de venta copiado), anulaciones y devoluciones; prueba de dos ventas simultáneas de la última unidad con dos conexiones.
+2. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
