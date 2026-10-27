@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-28 (Fase 6 completa en local: base de datos e interfaz de catálogo e inventario)
+Última actualización: 2026-10-28 (Fase 6 cerrada: base de datos e interfaz de catálogo e inventario, probadas en local y en CI)
 
 ---
 
@@ -41,7 +41,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 3. Modelo de datos | Aprobada |
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
-| 6. Productos e inventario | Base de datos e interfaz listas y probadas en local; **falta subir y confirmar el CI de la interfaz** |
+| 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 7. Compras | Siguiente (base de datos) |
 
 ## Migraciones
@@ -69,6 +69,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-28 | GitHub Actions, run 40547661672, commit `e3bfa8d` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la migración `catalogo_inventario` | **Pasan los dos** |
 | 2026-10-28 | Windows 11 del usuario: Vitest | 6 archivos: `formato`, `respuesta`, `env`, `rpc`, `decimal`, `ruta` (incluye `nuevaClave`) | **40/40 pasan**; typecheck y build pasan (aviso: JS > 500 kB) |
 | 2026-10-28 | Navegador integrado, app local en celular (375×812), datos del seed | Dueño: ingreso, lista con valorizado, merma (stock 10 → 9), merma mayor al stock (`No hay stock suficiente`), kardex, conteo con borrador que sobrevive a recargar y confirmación (queso 8,5 → 8,2; fósforos sin cambio), alta de producto con error de 3 decimales en el precio, presentación «Paquete 4», apertura. Vendedor: lista sin costos, ficha sin edición, ajuste bloqueado | **Todo funciona**; sin errores en consola |
+| 2026-10-28 | GitHub Actions, run 40550743078, commit `c644f24` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la interfaz de la Fase 6 | **Pasan los dos** |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
@@ -104,5 +105,4 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de la interfaz (`git push`) y confirmar que el CI pasa.
-2. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.
+1. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.
