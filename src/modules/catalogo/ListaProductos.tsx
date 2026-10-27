@@ -34,6 +34,7 @@ export function ListaProductos() {
         (!soloBajos || bajoStock(p)) &&
         (texto === '' ||
           normalizar(p.nombre).includes(texto) ||
+          [p.codigo_principal, p.codigo_auxiliar].some((c) => c !== null && normalizar(c) === texto) ||
           p.presentaciones.some((r) => r.codigo_barras === busqueda.trim())),
     );
   }, [productos.data, busqueda, soloBajos, verInactivos]);

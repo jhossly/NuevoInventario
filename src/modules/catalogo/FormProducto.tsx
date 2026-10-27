@@ -3,6 +3,8 @@ import { leerDecimal, paraEditar } from '@/shared/decimal';
 import { navegar } from '@/shared/ruta';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Selector } from '@/shared/ui';
 import {
+  OPCIONES_IVA,
+  textoIva,
   useCategorias,
   useGuardarCategoria,
   useGuardarProducto,
@@ -10,8 +12,9 @@ import {
   type Producto,
 } from './api';
 
-// Tarifas de IVA vigentes en Ecuador para una bodega.
-const TARIFAS_IVA = ['0', '5', '15'];
+// Límites del formulario de productos del portal del SRI.
+const LARGO_CODIGO = 25;
+const LARGO_INFORMACION = 300;
 
 interface Errores {
   nombre?: string;
@@ -29,8 +32,10 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
   const [nombre, setNombre] = useState(producto?.nombre ?? '');
   const [categoriaId, setCategoriaId] = useState(producto?.categoria_id ?? '');
   const [unidad, setUnidad] = useState<'UND' | 'KG'>(producto?.unidad_base ?? 'UND');
-  // Las opciones del selector de IVA usan punto ("15"), no coma.
-  const [tarifa, setTarifa] = useState(producto ? paraEditar(producto.tarifa_iva).replace(',', '.') : '15');
+  const [codigoIva, setCodigoIva] = useState(producto?.codigo_iva ?? '4');
+  const [codigoPrincipal, setCodigoPrincipal] = useState(producto?.codigo_principal ?? '');
+  const [codigoAuxiliar, setCodigoAuxiliar] = useState(producto?.codigo_auxiliar ?? '');
+  const [informacion, setInformacion] = useState(producto?.informacion_adicional ?? '');
   const [stockMinimo, setStockMinimo] = useState(producto ? paraEditar(producto.stock_minimo) : '0');
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [precio, setPrecio] = useState('');
@@ -57,8 +62,11 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
       nombre: nombre.trim(),
       categoria_id: categoriaId || null,
       unidad_base: unidad,
-      tarifa_iva: tarifa,
+      codigo_iva: codigoIva,
       stock_minimo: minimo.valor,
+      codigo_principal: codigoPrincipal.trim() || null,
+      codigo_auxiliar: codigoAuxiliar.trim() || null,
+      informacion_adicional: informacion.trim() || null,
     };
     if (editando) datos.activo = activo;
     else {
@@ -144,14 +152,43 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
           <option value="UND">Unidades</option>
           <option value="KG">Kilos</option>
         </Selector>
-        <Selector etiqueta="IVA" value={tarifa} onChange={(e) => setTarifa(e.target.value)}>
-          {TARIFAS_IVA.map((t) => (
-            <option key={t} value={t}>
-              {t} %
+        <Selector etiqueta="Tarifa IVA" value={codigoIva} onChange={(e) => setCodigoIva(e.target.value)}>
+          {OPCIONES_IVA.map((o) => (
+            <option key={o.codigo} value={o.codigo}>
+              {o.texto}
             </option>
           ))}
+          {!OPCIONES_IVA.some((o) => o.codigo === codigoIva) && (
+            <option value={codigoIva}>{textoIva(codigoIva)} (anterior)</option>
+          )}
         </Selector>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Campo
+          etiqueta="Código principal"
+          ayuda="El del portal del SRI"
+          value={codigoPrincipal}
+          maxLength={LARGO_CODIGO}
+          onChange={(e) => setCodigoPrincipal(e.target.value)}
+          autoComplete="off"
+        />
+        <Campo
+          etiqueta="Código auxiliar"
+          value={codigoAuxiliar}
+          maxLength={LARGO_CODIGO}
+          onChange={(e) => setCodigoAuxiliar(e.target.value)}
+          autoComplete="off"
+        />
+      </div>
+
+      <Campo
+        etiqueta="Información adicional"
+        value={informacion}
+        maxLength={LARGO_INFORMACION}
+        onChange={(e) => setInformacion(e.target.value)}
+        autoComplete="off"
+      />
 
       <Campo
         etiqueta={`Stock mínimo (${unidad === 'KG' ? 'kg' : 'unidades'})`}

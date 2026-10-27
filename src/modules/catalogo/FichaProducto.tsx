@@ -6,7 +6,7 @@ import { enlace } from '@/shared/ruta';
 import { AvisoError, Boton, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { FormPresentacion } from './FormPresentacion';
 import { FormProducto } from './FormProducto';
-import { UNIDADES, bajoStock, presentacionesOrdenadas, stockDe, useProducto, type Producto } from './api';
+import { UNIDADES, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useProducto, type Producto } from './api';
 
 export function FichaProducto({ id }: { id: string }) {
   const producto = useProducto(id);
@@ -86,7 +86,25 @@ function Ficha({ producto }: { producto: Producto }) {
             <dt className="text-gray-500">Categoría</dt>
             <dd>{producto.categorias?.nombre ?? 'Sin categoría'}</dd>
             <dt className="text-gray-500">IVA</dt>
-            <dd>{Number(producto.tarifa_iva)} %</dd>
+            <dd>{textoIva(producto.codigo_iva)}</dd>
+            {producto.codigo_principal && (
+              <>
+                <dt className="text-gray-500">Código principal</dt>
+                <dd>{producto.codigo_principal}</dd>
+              </>
+            )}
+            {producto.codigo_auxiliar && (
+              <>
+                <dt className="text-gray-500">Código auxiliar</dt>
+                <dd>{producto.codigo_auxiliar}</dd>
+              </>
+            )}
+            {producto.informacion_adicional && (
+              <>
+                <dt className="text-gray-500">Información adicional</dt>
+                <dd>{producto.informacion_adicional}</dd>
+              </>
+            )}
           </dl>
         </Tarjeta>
       )}

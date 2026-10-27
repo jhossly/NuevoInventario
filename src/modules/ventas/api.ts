@@ -333,3 +333,59 @@ const formatoHora = new Intl.DateTimeFormat('es-EC', {
 export function formatearMomento(iso: string): string {
   return formatoHora.format(new Date(iso));
 }
+
+// -----------------------------------------------------------------------------
+// IVA de ventas por fecha (D-045)
+// -----------------------------------------------------------------------------
+export const esquemaPeriodoIva = z.object({
+  id: uuid,
+  desde: z.string(),
+  iva_cero: z.boolean(),
+  nota: z.string().nullable(),
+});
+export type PeriodoIva = z.infer<typeof esquemaPeriodoIva>;
+
+const clavePeriodosIva = ['iva_ventas'] as const;
+
+/** Del más nuevo al más antiguo. */
+export function usePeriodosIva() {
+  return useQuery({
+    queryKey: clavePeriodosIva,
+    queryFn: () =>
+      consultar(
+        supabase.from('iva_ventas_periodos').select('id,desde,iva_cero,nota').order('desde', { ascending: false }),
+        z.array(esquemaPeriodoIva),
+      ),
+  });
+}
+
+/** El que rige en `fecha` (AAAA-MM-DD); sin ninguno se cobra la tarifa de cada producto. */
+export function periodoVigente(periodos: PeriodoIva[], fecha: string): PeriodoIva | undefined {
+  return periodos.find((p) => p.desde <= fecha);
+}
+
+function useInvalidarIva() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: clavePeriodosIva }),
+      queryClient.invalidateQueries({ queryKey: ['ventas', 'calculo'] }),
+    ]);
+}
+
+export function useFijarIva() {
+  const invalidar = useInvalidarIva();
+  return useMutation({
+    mutationFn: (d: { desde: string; ivaCero: boolean; nota: string | null }) =>
+      llamar('fijar_iva_ventas', { p_desde: d.desde, p_iva_cero: d.ivaCero, p_nota: d.nota }, z.object({ id: uuid })),
+    onSuccess: invalidar,
+  });
+}
+
+export function useQuitarIva() {
+  const invalidar = useInvalidarIva();
+  return useMutation({
+    mutationFn: (id: string) => llamar('quitar_iva_ventas', { p_id: id }, z.object({ id: uuid })),
+    onSuccess: invalidar,
+  });
+}

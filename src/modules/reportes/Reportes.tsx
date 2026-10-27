@@ -5,7 +5,8 @@ import { llamar } from '@/lib/datos';
 import { generarCsv, descargarArchivo } from '@/shared/csv';
 import { rangoMes, aTexto, nombrarMes, type Rango } from '@/shared/fechas';
 import { formatearCantidad, formatearDinero, formatearPorcentaje } from '@/shared/formato';
-import { AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
+import { AvisoError, Boton, Campo, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { enlace } from '@/shared/ruta';
 import {
   pedirExportacion,
   useAcumuladoRimpe,
@@ -36,7 +37,10 @@ export function Reportes() {
 
   return (
     <>
-      <Encabezado titulo="Reportes" />
+      <Encabezado
+        titulo="Reportes"
+        acciones={<EnlaceBoton href={enlace({ nombre: 'iva-ventas' })}>IVA de ventas</EnlaceBoton>}
+      />
       <Tarjeta className="mb-4">
         <div className="flex flex-wrap items-end gap-2">
           <Boton variante="secundario" onClick={() => elegir({ desde: aTexto(new Date()), hasta: aTexto(new Date()) })}>

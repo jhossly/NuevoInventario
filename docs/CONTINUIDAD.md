@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-02 (Fase 11 cerrada: MVP-1 completo, probado en local y en CI)
+Última actualización: 2026-10-27 (productos con datos del SRI e IVA de ventas por fecha; sin push)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-043). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-045). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -60,6 +60,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261031000000_caja_fiado.sql` | `cajas` (una abierta por empresa; solo se cierra una vez y se explica una vez; esperado y diferencia ocultos al Vendedor), `caja_movimientos`, `fiado_movimientos` (inmutables), `ventas.caja_id`, `devoluciones.caja_id`. `privado.caja_abierta` (bloqueo compartido), `privado.efectivo_caja`, `privado.saldo_fiado`. Expuestas: `abrir_caja`, `movimiento_caja`, `cerrar_caja`, `resumen_caja`, `explicar_diferencia_caja`, `registrar_abono`, `ajustar_fiado`, `cuentas_fiado`. Nuevas versiones de `registrar_venta` (FIADO, caja para efectivo), `anular_venta` y `registrar_devolucion` (egreso automático o ajuste de fiado) |
 | `20261101000000_reportes.sql` | `empresas.limite_ingresos_rimpe` (20000). `privado.error_periodo`, `privado.lineas_netas` (ventas confirmadas − devoluciones, por línea). Expuestas, solo Dueño: `reporte_ventas`, `reporte_margen`, `acumulado_rimpe`, `exportacion_contador` |
 | `20261102000000_comprobantes_sri.sql` | `comprobantes` (XML guardado; solo se vincula una vez; se descarta si no tiene venta), `comprobante_lineas` (solo cambia el producto asociado, antes del vínculo), `codigos_sri` (memoria código → presentación). Lectores `privado.xml_texto`, `xml_interno` (CDATA o escapado), `xml_numero`, `digito_clave_acceso` (módulo 11). Expuestas, solo Dueño: `importar_comprobante`, `asociar_linea_comprobante`, `candidatos_comprobante`, `vincular_comprobante`, `crear_venta_de_comprobante`, `descartar_comprobante` |
+| `20261103000000_productos_sri_iva.sql` | Productos con `codigo_principal` (único por bodega), `codigo_auxiliar` (25 caracteres), `informacion_adicional` (300) y `codigo_iva` del SRI (0, 5, 4 = 15 %, 6 = No objeto, 7 = Exento); `tarifa_iva` se deriva por trigger. `venta_detalles.codigo_iva`. Trigger que asocia líneas de facturas del SRI por código principal o auxiliar. `iva_ventas_periodos` + `privado.iva_cero_en`. Expuestas: `fijar_iva_ventas`, `quitar_iva_ventas` (solo Dueño); nuevas versiones de `guardar_producto` y `privado.calcular_lineas_venta` (IVA 0 % mientras rija) |
+
+Interfaz (productos SRI e IVA): el formulario de producto tiene «Tarifa IVA» (0 %, 5 %, 15 %, No objeto de impuesto, Exento de IVA), código principal y auxiliar e información adicional; la lista de productos y «Vender» encuentran por esos códigos. Pantalla «IVA de ventas» (desde Reportes, solo Dueño): estado de hoy, «desde tal fecha las ventas van con IVA 0 % / con la tarifa de cada producto», historial y quitar cambios futuros. «Vender» avisa «Las ventas van con IVA 0 %» mientras rija.
 
 Interfaz (Fase 11): «Facturas del SRI» (desde Ventas, solo Dueño): subir varios XML, ver el resultado de cada archivo, por cada factura pendiente asociar líneas a productos, vincular a la venta candidata («Es esta venta») o «No la registré: crear la venta», o descartar.
 
@@ -102,6 +105,8 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-11-01 | Vitest | `csv.test.ts` (BOM, `;`, coma decimal, comillas, fórmulas neutralizadas, rangos de mes con febrero bisiesto) | **49/49 pasan** |
 | 2026-11-02 | Windows 11 del usuario: Supabase local | `007_comprobantes_sri` (39: sobre con CDATA y factura sola, repetida, otro RUC, ambiente de pruebas, dígito verificador, no autorizada, DOCTYPE, no XML, centavo de IVA, asociación y memoria, crear venta con montos/stock/cliente/pagos, vincular D-012 sin duplicar, descartar, inmutabilidad, permisos) | **310/310 pasan**. Mutación: sin dígito verificador y vincular sin fecha/total → fallan I7 y V6 |
 | 2026-11-02 | Supabase local, transacción revertida, con 2 XML reales del dueño (no se guardan en el repositorio) | Factura emitida 001-100-000001529 (firmada, sin sobre de autorización, 17 líneas, IVA 0 %) y factura de un proveedor (con sobre y CDATA) | **Emitida: se importa, no se duplica y crea la venta** ($48,60, 17 líneas, 51 u, efectivo, sin caja, 17 códigos recordados). **Proveedor: rechazada por otro RUC**, como corresponde |
+| 2026-10-27 | Windows 11 del usuario: Supabase local | `008_productos_sri_iva` (34: las 5 tarifas y su código, códigos SRI únicos y de 25 caracteres, IVA 0 % por fecha en venta y vista previa sin tocar la tarifa ni ventas pasadas, exento sigue exento, corregir el día, cambio futuro y quitarlo, permisos, aislamiento, asociación de facturas por código principal/auxiliar) | **344/344 pasan**. Mutación: `iva_cero_en` siempre falso y sin trigger de asociación → fallan V5, V6, V10, V13 y C1 |
+| 2026-10-27 | Navegador, celular, datos del seed | Dueño: «IVA de ventas» → desde hoy IVA 0 % (vigente, historial); «Vender» muestra el aviso y el aceite de $3,45 sale con IVA $0,00; alta de «Recarga Claro $1» con No objeto, código REC128 e información adicional; «rec128» la encuentra en «Vender». Typecheck y Vitest (49) pasan | **Todo funciona**. La base local quedó con IVA 0 % desde hoy |
 | 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
 | 2026-11-01 | GitHub Actions, run 40584727008, commit `bab975e` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
@@ -135,9 +140,9 @@ Ninguno abierto. Resueltos:
 ## Riesgos pendientes
 
 - **Hallazgos con XML reales (2026-11-02), a decidir con el dueño y el contador:**
-  - **IVA de las ventas.** La factura real del dueño cobra IVA 0 % en todo (incluida la Coca-Cola), como corresponde a RIMPE Negocio Popular, pero el catálogo tiene productos con 15 %. Si el negocio no cobra IVA en sus ventas, hace falta una configuración de la empresa para vender siempre con 0 % (las compras sí traen IVA). **Confirmar con el contador antes de usar el sistema.**
+  - **IVA de las ventas.** Resuelto con D-045: el dueño fija «desde tal fecha, IVA 0 %» en «IVA de ventas» (antes cobraba IVA; hoy factura todo con 0 %). **Confirmar con el contador** la fecha desde la que rige. Pendiente: la exportación y el resumen de IVA suman 0 %, No objeto y Exento en «base 0 %»; separarlos con `venta_detalles.codigo_iva` si el contador lo pide.
   - **Recargas telefónicas.** La factura incluye «RECARGA CLARO GIGAS»: es un servicio, no algo con stock. Hoy todo producto controla stock y la venta se bloquearía. Hace falta un tipo de producto sin control de stock (servicio).
-  - **Códigos internos.** El portal del SRI usa códigos propios del dueño (0065, REC128…), no códigos de barras: la primera vez hay que asociar cada línea a mano (17 en esta factura); después se recuerdan. Conviene una forma más rápida de asociar (o crear el producto desde la línea).
+  - **Códigos internos.** El portal del SRI usa códigos propios del dueño (0065, REC128…), no códigos de barras. Si el producto tiene ese código principal (o auxiliar), la línea se asocia sola (D-044); si no, se asocia a mano una vez y se recuerda. Falta: crear el producto desde la línea.
   - La factura emitida llega **firmada pero sin el sobre de autorización**; se acepta (el importador lee ambos formatos).
   - Si más adelante se importan facturas de **proveedores como compras**: traen ICE (código 3) e IRBPNR por botellas (código 5) que suman al total, el código de barras viene en `codigoAuxiliar` y hay líneas de bonificación a precio 0.
 - Una venta con factura que se anula en el sistema no anula la factura en el SRI: eso se hace en el portal (hasta el día 7 del mes siguiente).
@@ -157,6 +162,7 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Decidir con el dueño y el contador los hallazgos de los XML reales (ver Riesgos): IVA 0 % en ventas, productos sin stock (recargas), asociación rápida de códigos.
-2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
+1. Push y CI del commit de productos SRI e IVA por fecha (local adelante de `origin` por 3 commits).
+2. Decidir con el dueño los hallazgos que faltan de los XML reales (ver Riesgos): productos sin stock (recargas) y crear el producto desde una línea de factura.
+3. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
+4. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.

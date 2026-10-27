@@ -23,6 +23,10 @@ export const esquemaProducto = z.object({
   nombre: z.string(),
   unidad_base: z.enum(['UND', 'KG']),
   tarifa_iva: decimal,
+  codigo_iva: z.string(),
+  codigo_principal: z.string().nullable(),
+  codigo_auxiliar: z.string().nullable(),
+  informacion_adicional: z.string().nullable(),
   stock_minimo: decimal,
   activo: z.boolean(),
   categoria_id: uuid.nullable(),
@@ -47,6 +51,10 @@ const COLUMNAS_PRODUCTO = [
   'nombre',
   'unidad_base',
   'tarifa_iva:tarifa_iva::text',
+  'codigo_iva',
+  'codigo_principal',
+  'codigo_auxiliar',
+  'informacion_adicional',
   'stock_minimo:stock_minimo::text',
   'activo',
   'categoria_id',
@@ -59,6 +67,25 @@ const COLUMNAS_PRODUCTO = [
 // Ayudas de lectura
 // -----------------------------------------------------------------------------
 export const UNIDADES = { UND: 'unidades', KG: 'kg' } as const;
+
+/**
+ * Tarifas de IVA del formulario de productos del portal del SRI, por su código
+ * (codigoPorcentaje). Los códigos 2, 3 y 10 (12 %, 14 %, 13 %) ya no se
+ * eligen, pero un producto antiguo puede tenerlos.
+ */
+export const OPCIONES_IVA = [
+  { codigo: '0', texto: '0 %' },
+  { codigo: '5', texto: '5 %' },
+  { codigo: '4', texto: '15 %' },
+  { codigo: '6', texto: 'No objeto de impuesto' },
+  { codigo: '7', texto: 'Exento de IVA' },
+] as const;
+
+const OTRAS_TARIFAS: Record<string, string> = { '2': '12 %', '3': '14 %', '10': '13 %' };
+
+export function textoIva(codigo: string): string {
+  return OPCIONES_IVA.find((o) => o.codigo === codigo)?.texto ?? OTRAS_TARIFAS[codigo] ?? `código ${codigo}`;
+}
 
 export function stockDe(producto: Producto): string {
   return producto.existencias[0]?.cantidad ?? '0';
@@ -115,9 +142,12 @@ export interface DatosProducto {
   nombre?: string;
   categoria_id?: string | null;
   unidad_base?: 'UND' | 'KG';
-  tarifa_iva?: string;
+  codigo_iva?: string;
   stock_minimo?: string;
   activo?: boolean;
+  codigo_principal?: string | null;
+  codigo_auxiliar?: string | null;
+  informacion_adicional?: string | null;
   precio_venta?: string | null;
   codigo_barras?: string | null;
 }

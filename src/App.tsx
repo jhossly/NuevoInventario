@@ -11,6 +11,7 @@ import { Clientes } from '@/modules/ventas/Clientes';
 import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
 import { ListaVentas } from '@/modules/ventas/ListaVentas';
 import { PuntoVenta } from '@/modules/ventas/PuntoVenta';
+import { IvaVentas } from '@/modules/ventas/IvaVentas';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
@@ -70,7 +71,7 @@ const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDu
     incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'],
     soloDueno: true,
   },
-  { titulo: 'Reportes', ruta: { nombre: 'reportes' }, incluye: ['reportes'], soloDueno: true },
+  { titulo: 'Reportes', ruta: { nombre: 'reportes' }, incluye: ['reportes', 'iva-ventas'], soloDueno: true },
 ];
 
 function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
@@ -161,6 +162,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<Reportes />);
     case 'comprobantes':
       return soloDueno(<Comprobantes />);
+    case 'iva-ventas':
+      return soloDueno(<IvaVentas />);
     case 'no-encontrada':
       return (
         <Tarjeta>

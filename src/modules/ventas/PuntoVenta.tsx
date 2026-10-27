@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { UNIDADES, stockDe, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
 import { useCuentasFiado, useResumenCaja } from '@/modules/caja/api';
 import { leerDecimal, paraEditar, restarDinero } from '@/shared/decimal';
+import { aTexto } from '@/shared/fechas';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
@@ -12,8 +13,10 @@ import { FormCliente } from './Clientes';
 import {
   COMPROBANTES,
   MEDIOS,
+  periodoVigente,
   useCalculoVenta,
   useClientes,
+  usePeriodosIva,
   useRegistrarVenta,
   type LineaVenta,
   type Medio,
@@ -69,7 +72,14 @@ export function PuntoVenta() {
       .flatMap((p) =>
         p.presentaciones
           .filter((r) => r.activo && r.se_vende && r.precio_venta !== null)
-          .filter((r) => normalizar(p.nombre).includes(texto) || r.codigo_barras === busqueda.trim())
+          .filter(
+            (r) =>
+              normalizar(p.nombre).includes(texto) ||
+              r.codigo_barras === busqueda.trim() ||
+              // Los códigos del SRI son del producto: llevan a su presentación base.
+              (Number(r.factor) === 1 &&
+                [p.codigo_principal, p.codigo_auxiliar].some((c) => c !== null && normalizar(c) === texto)),
+          )
           .map((r) => ({ producto: p, presentacion: r })),
       )
       .slice(0, 10);
@@ -165,6 +175,7 @@ export function PuntoVenta() {
     <div className="grid gap-4 md:grid-cols-[1fr_20rem]">
       <section>
         <h1 className="mb-3 text-xl font-semibold">Vender</h1>
+        <AvisoIvaCero />
         <div className="relative mb-3">
           <input
             ref={buscador}
@@ -423,6 +434,18 @@ export function PuntoVenta() {
           </div>
         </Tarjeta>
       </aside>
+    </div>
+  );
+}
+
+/** Mientras rige «IVA 0 %» (D-045), quien vende lo ve antes de cobrar. */
+function AvisoIvaCero() {
+  const periodos = usePeriodosIva();
+  const vigente = periodoVigente(periodos.data ?? [], aTexto(new Date()));
+  if (!vigente?.iva_cero) return null;
+  return (
+    <div className="mb-3">
+      <Aviso tipo="info">Las ventas van con IVA 0 %{vigente.nota ? ` (${vigente.nota})` : ''}.</Aviso>
     </div>
   );
 }
