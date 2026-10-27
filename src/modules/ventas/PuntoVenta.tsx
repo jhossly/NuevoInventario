@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { UNIDADES, stockDe, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
+import { useCuentasFiado, useResumenCaja } from '@/modules/caja/api';
 import { leerDecimal, paraEditar, restarDinero } from '@/shared/decimal';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
@@ -45,6 +46,8 @@ export function PuntoVenta() {
   const productos = useProductos();
   const clientes = useClientes();
   const registrar = useRegistrarVenta();
+  const caja = useResumenCaja();
+  const cuentas = useCuentasFiado();
   const buscador = useRef<HTMLInputElement>(null);
   const unaVez = useUnSoloEnvio();
 
@@ -119,12 +122,18 @@ export function PuntoVenta() {
       ? Number((calculo.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
       : -1;
 
+  // Caja y fiado (Fase 9): la base vuelve a validarlo todo al cobrar.
+  const cajaCerrada = caja.isSuccess && caja.data === null;
+  const sinCajaParaEfectivo = medio === 'EFECTIVO' && cajaCerrada;
+  const cuentaCliente = cuentas.data?.find((c) => c.cliente_id === clienteId);
+  const fiadoSinCliente = medio === 'FIADO' && clienteId === '';
+
   const recibidoLeido = recibido.trim() === '' ? null : leerDecimal(recibido, { decimales: 2 });
   const vuelto = total && recibidoLeido?.ok ? restarDinero(recibidoLeido.valor, total) : null;
   const faltaDinero = vuelto !== null && vuelto.startsWith('-');
 
   const cobrar = () => {
-    if (!paraEnviar || !total || calculo.isError) return;
+    if (!paraEnviar || !total || calculo.isError || sinCajaParaEfectivo || fiadoSinCliente) return;
     unaVez((terminar) => registrar.mutate(
       {
         lineas: paraEnviar,
@@ -345,7 +354,7 @@ export function PuntoVenta() {
           </p>
 
           <div className="mt-3 flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Medio de pago">
+            <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label="Medio de pago">
               {(Object.keys(MEDIOS) as Medio[]).map((m) => (
                 <button
                   key={m}
@@ -361,7 +370,23 @@ export function PuntoVenta() {
                 </button>
               ))}
             </div>
-            {medio === 'EFECTIVO' && (
+            {sinCajaParaEfectivo && (
+              <Aviso>
+                La caja está cerrada. <a href={enlace({ nombre: 'caja' })} className="underline">Abrir caja</a> para cobrar en
+                efectivo.
+              </Aviso>
+            )}
+            {medio === 'FIADO' &&
+              (fiadoSinCliente ? (
+                <Aviso>Elige el cliente que se lleva al fiado.</Aviso>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  {cuentaCliente?.fiado_permitido
+                    ? `Debe ${formatearDinero(cuentaCliente.saldo)} · disponible ${formatearDinero(cuentaCliente.disponible)}`
+                    : 'Este cliente no tiene fiado autorizado.'}
+                </p>
+              ))}
+            {medio === 'EFECTIVO' && !cajaCerrada && (
               <Campo
                 etiqueta="Recibido"
                 inputMode="decimal"
@@ -383,7 +408,15 @@ export function PuntoVenta() {
             <Boton
               className="min-h-14 text-lg"
               onClick={cobrar}
-              disabled={!total || calculo.isFetching || calculo.isError || registrar.isPending || faltaDinero}
+              disabled={
+                !total ||
+                calculo.isFetching ||
+                calculo.isError ||
+                registrar.isPending ||
+                faltaDinero ||
+                sinCajaParaEfectivo ||
+                fiadoSinCliente
+              }
             >
               {registrar.isPending ? 'Cobrando…' : total ? `Cobrar ${formatearDinero(total)}` : 'Cobrar'}
             </Boton>

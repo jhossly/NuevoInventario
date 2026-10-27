@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leerDecimal, negar, paraEditar, restarDinero } from './decimal';
+import { leerDecimal, negar, paraEditar, restarDinero, sumarDinero } from './decimal';
 
 describe('leerDecimal', () => {
   it('acepta coma o punto y devuelve texto con punto', () => {
@@ -61,6 +61,14 @@ describe('restarDinero', () => {
 
   it('indica cuánto falta con signo negativo', () => {
     expect(restarDinero('5', '7.5')).toBe('-2.50');
+  });
+});
+
+describe('sumarDinero', () => {
+  it('suma sin errores de coma flotante', () => {
+    expect(sumarDinero(['0.10', '0.20'])).toBe('0.30');
+    expect(sumarDinero(['10.35', '-4.00', '2.90'])).toBe('9.25');
+    expect(sumarDinero([])).toBe('0.00');
   });
 });
 

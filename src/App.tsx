@@ -3,6 +3,8 @@ import { DetalleCompra } from '@/modules/compras/DetalleCompra';
 import { ListaCompras } from '@/modules/compras/ListaCompras';
 import { NuevaCompra } from '@/modules/compras/NuevaCompra';
 import { Proveedores } from '@/modules/compras/Proveedores';
+import { Caja } from '@/modules/caja/Caja';
+import { Fiado } from '@/modules/caja/Fiado';
 import { Clientes } from '@/modules/ventas/Clientes';
 import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
 import { ListaVentas } from '@/modules/ventas/ListaVentas';
@@ -53,6 +55,8 @@ export function App() {
 const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDueno?: boolean }[] = [
   { titulo: 'Vender', ruta: { nombre: 'vender' }, incluye: ['vender'] },
   { titulo: 'Ventas', ruta: { nombre: 'ventas' }, incluye: ['ventas', 'venta', 'clientes'] },
+  { titulo: 'Caja', ruta: { nombre: 'caja' }, incluye: ['caja'] },
+  { titulo: 'Fiado', ruta: { nombre: 'fiado' }, incluye: ['fiado'] },
   {
     titulo: 'Productos',
     ruta: { nombre: 'productos' },
@@ -72,21 +76,24 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
   return (
     <div className="min-h-dvh">
       <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-1 px-4 py-2 sm:gap-3">
-          <a href={enlace({ nombre: 'vender' })} className="flex-1 truncate font-semibold">
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
+          <a href={enlace({ nombre: 'vender' })} className="hidden max-w-40 shrink-0 truncate font-semibold sm:block">
             {contexto.nombre}
           </a>
-          {SECCIONES.filter((s) => esDueno || !s.soloDueno).map((s) => (
+          {/* En el celular las secciones no caben: se desplazan de lado. */}
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+            {SECCIONES.filter((s) => esDueno || !s.soloDueno).map((s) => (
               <a
                 key={s.titulo}
                 href={enlace(s.ruta)}
                 aria-current={s.incluye.includes(ruta.nombre) ? 'page' : undefined}
-                className="rounded-lg px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900"
+                className="whitespace-nowrap rounded-lg px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900"
               >
                 {s.titulo}
               </a>
-          ))}
-          <span className="hidden text-sm text-gray-500 md:inline">
+            ))}
+          </div>
+          <span className="hidden shrink-0 text-sm text-gray-500 lg:inline">
             {correo} · {contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}
           </span>
           <Boton variante="secundario" onClick={() => void cerrarSesion()}>
@@ -143,6 +150,10 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return <DetalleVenta id={ruta.id} />;
     case 'clientes':
       return <Clientes />;
+    case 'caja':
+      return <Caja />;
+    case 'fiado':
+      return <Fiado />;
     case 'no-encontrada':
       return (
         <Tarjeta>

@@ -5,7 +5,7 @@ import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/for
 import { enlace } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import {
   COMPROBANTES,
   MEDIOS,
@@ -259,6 +259,7 @@ function Devolver({
   const unaVez = useUnSoloEnvio();
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [motivo, setMotivo] = useState('');
+  const [forma, setForma] = useState<'EFECTIVO' | 'ABONO_FIADO'>('EFECTIVO');
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [clave] = useState(nuevaClave);
 
@@ -276,7 +277,7 @@ function Devolver({
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) return;
     unaVez((terminar) =>
-      registrar.mutate({ ventaId: venta.id, lineas, motivo: motivo.trim(), clave }, { onSuccess: alTerminar, onSettled: terminar }),
+      registrar.mutate({ ventaId: venta.id, lineas, motivo: motivo.trim(), forma, clave }, { onSuccess: alTerminar, onSettled: terminar }),
     );
   };
 
@@ -284,8 +285,16 @@ function Devolver({
     <Tarjeta>
       <h2 className="mb-1 font-semibold">Devolución</h2>
       <p className="mb-3 text-sm text-gray-600">
-        Lo devuelto vuelve al inventario al costo con que salió y se reintegra en efectivo.
+        Lo devuelto vuelve al inventario al costo con que salió. El efectivo sale de la caja abierta.
       </p>
+      {venta.cliente_id && (
+        <div className="mb-3">
+          <Selector etiqueta="Reintegro" value={forma} onChange={(e) => setForma(e.target.value as typeof forma)}>
+            <option value="EFECTIVO">En efectivo</option>
+            <option value="ABONO_FIADO">Descontar de lo que debe (fiado)</option>
+          </Selector>
+        </div>
+      )}
       <ul className="flex flex-col gap-2">
         {venta.venta_detalles.map((d) => {
           const queda = Number(d.cantidad) - devuelto(d.id);

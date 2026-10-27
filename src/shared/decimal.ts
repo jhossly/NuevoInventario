@@ -60,15 +60,24 @@ export function paraEditar(valor: string): string {
  * Ambos valores deben venir ya validados con 2 decimales como máximo.
  */
 export function restarDinero(recibido: string, total: string): string {
-  const centavos = (v: string): bigint => {
-    const [enteros = '0', fraccion = ''] = v.replace('-', '').split('.');
-    const absoluto = BigInt(enteros) * 100n + BigInt((fraccion + '00').slice(0, 2));
-    return v.startsWith('-') ? -absoluto : absoluto;
-  };
-  const diferencia = centavos(recibido) - centavos(total);
-  const absoluto = diferencia < 0n ? -diferencia : diferencia;
+  return desdeCentavos(aCentavos(recibido) - aCentavos(total));
+}
+
+/** Suma de montos de dinero en centavos exactos, para mostrar totales. */
+export function sumarDinero(valores: string[]): string {
+  return desdeCentavos(valores.reduce((s, v) => s + aCentavos(v), 0n));
+}
+
+function aCentavos(v: string): bigint {
+  const [enteros = '0', fraccion = ''] = v.replace('-', '').split('.');
+  const absoluto = BigInt(enteros) * 100n + BigInt((fraccion + '00').slice(0, 2));
+  return v.startsWith('-') ? -absoluto : absoluto;
+}
+
+function desdeCentavos(centavos: bigint): string {
+  const absoluto = centavos < 0n ? -centavos : centavos;
   const texto = `${absoluto / 100n}.${String(absoluto % 100n).padStart(2, '0')}`;
-  return diferencia < 0n ? `-${texto}` : texto;
+  return centavos < 0n ? `-${texto}` : texto;
 }
 
 /** Cambia el signo de un decimal ya normalizado ("2" → "-2"). */

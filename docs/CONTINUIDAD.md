@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-30 (Fase 8 cerrada: ventas probadas en local y en CI, con concurrencia)
+Última actualización: 2026-10-31 (Fase 9: caja y fiado listos y probados en local; falta CI)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-031). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-036). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -44,7 +44,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 8. Ventas | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
-| 9. Caja y fiado | Siguiente |
+| 9. Caja y fiado | Base de datos e interfaz probadas en local (245/245 pgTAP, 3 pruebas de concurrencia, navegador); **falta subir y CI** |
+| 10. Reportes y exportación | Siguiente |
 
 ## Migraciones
 
@@ -54,6 +55,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261028000000_catalogo_inventario.sql` | `categorias`, `productos`, `presentaciones`, `movimientos_inventario` (inmutable, con `secuencia`), `existencias` (costos ocultos por columna, D-020), `conteos`, `conteo_detalles` (congelados al confirmar). Motor `privado.registrar_movimiento` (promedio ponderado, bloqueo de fila, `STOCK_INSUFICIENTE`). `privado.fallar()` (errores de negocio con SQLSTATE `NG001`) y `privado.ve_costos()`. Expuestas: `guardar_categoria`, `eliminar_categoria`, `guardar_producto`, `guardar_presentacion`, `ajustar_inventario`, `inventario_valorizado`, `guardar_conteo`, `confirmar_conteo` |
 | `20261029000000_compras.sql` | `proveedores`, `compras` (solo pasa de CONFIRMADA a ANULADA), `compra_detalles` (inmutables). Tipo de movimiento `ANULACION_COMPRA`; `registrar_movimiento` recibe la fecha del documento. `privado.calcular_lineas_compra` (única fuente del cálculo), `privado.normalizar_documento`. Expuestas: `guardar_proveedor`, `calcular_compra` (vista previa), `registrar_compra`, `anular_compra` |
 | `20261030000000_ventas.sql` | `clientes`, `ventas` (solo admite pedir anulación o pasar a ANULADA), `venta_detalles`, `venta_pagos`, `devoluciones`, `devolucion_detalles` (inmutables). `empresas.monto_max_consumidor_final` (50) y `monto_max_sin_comprobante` (0). `privado.calcular_lineas_venta` (única fuente del cálculo, IVA incluido o no), `privado.explicar_error_venta`. Expuestas: `guardar_cliente`, `calcular_venta`, `registrar_venta`, `solicitar_anulacion_venta`, `anular_venta`, `registrar_devolucion`, `costos_venta`. Un reintento simultáneo con la misma clave devuelve la venta ya creada |
+| `20261031000000_caja_fiado.sql` | `cajas` (una abierta por empresa; solo se cierra una vez y se explica una vez; esperado y diferencia ocultos al Vendedor), `caja_movimientos`, `fiado_movimientos` (inmutables), `ventas.caja_id`, `devoluciones.caja_id`. `privado.caja_abierta` (bloqueo compartido), `privado.efectivo_caja`, `privado.saldo_fiado`. Expuestas: `abrir_caja`, `movimiento_caja`, `cerrar_caja`, `resumen_caja`, `explicar_diferencia_caja`, `registrar_abono`, `ajustar_fiado`, `cuentas_fiado`. Nuevas versiones de `registrar_venta` (FIADO, caja para efectivo), `anular_venta` y `registrar_devolucion` (egreso automático o ajuste de fiado) |
+
+Interfaz (Fase 9): pantallas Caja (abrir con fondo, ingresos y egresos, cierre a ciegas, historial con diferencia y explicación para el Dueño) y Fiado (por cobrar, cuenta del cliente, abonos, ajustes del Dueño); en «Vender», medio Fiado con saldo disponible y aviso de caja cerrada; en devoluciones, reintegro en efectivo o a la cuenta. Menú desplazable en el celular.
 
 Interfaz (Fase 8): inicio en «Vender» (punto de venta: buscar con 2 letras o escanear y Enter, +/−, kilos, descuento, comprobante, cliente con alta rápida, medio de pago, vuelto, «Cobrar» con candado contra doble toque `useUnSoloEnvio`); ventas (el Vendedor ve las suyas), detalle con costos y utilidad para el Dueño, anular, devolver, pedir anulación; clientes. Menú para ambos roles: Vender, Ventas, Productos (+ Compras para el Dueño).
 
@@ -84,6 +88,9 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-30 | Windows 11 del usuario: Supabase local | `004_ventas` (63: Fase 3 y HU-02/HU-03, descuento, precios sin IVA, stock, idempotencia, pagos, comprobante, Vendedor, devoluciones que cuadran, anulación, inmutabilidad, aislamiento) | **195/195 pasan**. Mutación: sin tope de descuento → falla C5; última devolución proporcional → falla D15 |
 | 2026-10-30 | Windows 11 del usuario: `npm run db:test:concurrencia` (dos conexiones) | 1) última unidad vendida a la vez; 2) dos «Cobrar» simultáneos con la misma clave | **2/2 pasan**. Sin bloqueo de fila ni insert previo, la 1 falla (DATOS_INVALIDOS en vez de STOCK_INSUFICIENTE) |
 | 2026-10-30 | GitHub Actions, run 40577693759, commit `ba6ea62` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + `venta_ultima_unidad.sh` (dos conexiones) | **Pasan todos los pasos**, también la concurrencia |
+| 2026-10-31 | Windows 11 del usuario: Supabase local | `005_caja_fiado` (50: HU-04, cierre a ciegas, límite del Vendedor, abonos, ajustes, anulación y devolución con caja y fiado, inmutabilidad, aislamiento) y `004_ventas` ajustado a la caja | **245/245 pasan**. Mutación: esperado sin abonos y Vendedor sin límite → fallan 10/50 |
+| 2026-10-31 | `npm run db:test:concurrencia` | Nuevo caso 3: dos ventas al fiado a la vez que juntas pasan el límite | **3/3 pasan**. Sin bloquear al cliente, el caso 3 falla (las dos pasan y la deuda queda en $6,90 sobre $5) |
+| 2026-10-31 | Navegador, 1200 px y celular | Vendedor: «Cobrar» bloqueado sin caja, abrir con $20, venta en efectivo, venta al fiado a Doña Rosa (disponible $15 → $8,10), abono de $5, cierre a ciegas contando $28. Dueño: esperado $28,45, falta $0,45, explicación guardada | **Todo funciona**; la única llamada con error es el cierre de una sesión anterior al reset de la base |
 | 2026-10-30 | Navegador, 1200 px, datos del seed | Vendedor: buscar + Enter, escanear código, queso 1,25 kg, total $13,45, descuento rechazado (tope 0 %), vuelto $6,55, doble clic en «Cobrar» → una venta, pedir anulación. Dueño: costo y utilidad, anular, vender 3 Colas escaneando y devolver 1 | **Todo funciona**. Se encontró y corrigió: el doble clic mostraba «El registro ya existe» (la venta sí era una sola) |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
@@ -119,12 +126,13 @@ Ninguno abierto. Resueltos:
 - La interfaz debe pedir columnas explícitas de `existencias`: `select *` falla por el permiso por columna (D-020).
 - El paquete JS pesa más de 500 kB (supabase-js + zod + React). Dividirlo por pantallas cuando lleguen ventas y caja.
 - `registrar_compra` y `ajustar_inventario` responden DUPLICADO (no la operación existente) si dos pedidos con la misma clave llegan exactamente a la vez; los datos quedan bien. Igualar a ventas en una migración futura.
+- Ir a «Caja» desde «Vender» para abrirla vacía el carrito en curso (la pantalla se desmonta). Mejorar si molesta en el uso real.
 - La utilidad de una venta en su detalle no descuenta las devoluciones; los reportes (Fase 10) deben usar ventas − devoluciones.
 - Docker Desktop puede apagarse al suspender la PC: si `supabase` dice que no encuentra el motor, abrir Docker Desktop y esperar.
 - Sin pruebas automáticas de componentes React (no hay jsdom ni Testing Library): las pantallas se probaron a mano en el navegador. Reevaluar en la Fase 8 (D-018).
 
 ## Próximas tareas
 
-1. Fase 9: caja (apertura, cierre, diferencia; `ventas.caja_id`) y fiado (cuentas por cobrar, límite, abonos, pago FIADO y reintegro ABONO_FIADO).
+1. Subir los commits de caja y fiado (`git push`) y confirmar el CI.
 2. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
 3. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.

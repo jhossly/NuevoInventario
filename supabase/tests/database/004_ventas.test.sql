@@ -56,6 +56,8 @@ select set_config('prueba.libra', public.guardar_presentacion(null, jsonb_build_
 
 select public.ajustar_inventario(current_setting('prueba.aceite')::uuid, 'APERTURA', 10, 2);
 select public.ajustar_inventario(current_setting('prueba.queso')::uuid, 'APERTURA', 10, 4);
+-- Desde la Fase 9 el efectivo necesita la caja abierta (HU-04).
+select public.abrir_caja(20);
 reset role;
 select privado.registrar_movimiento('aaaaaaaa-0000-0000-0000-000000000000',
   current_setting('prueba.aceite')::uuid, 'COMPRA', 24, 2.645);
@@ -172,8 +174,8 @@ select is((select count(*)::int from public.venta_pagos where venta_id = nullif(
 select is(public.registrar_venta(
     jsonb_build_array(jsonb_build_object('presentacion_id', current_setting('prueba.aceite_u'), 'cantidad', 1)),
     '[{"medio":"FIADO","monto":3.45}]', current_setting('prueba.cliente')::uuid, null, gen_random_uuid())
-    -> 'error' ->> 'codigo', 'DATOS_INVALIDOS',
-  'R11. El fiado todavía no se acepta (llega con la Fase 9)');
+    -> 'error' ->> 'codigo', 'LIMITE_FIADO',
+  'R11. El Vendedor no fía a un cliente sin fiado autorizado (Fase 4)');
 
 select is(public.registrar_venta(
     jsonb_build_array(jsonb_build_object('presentacion_id', current_setting('prueba.aceite_u'), 'cantidad', 16)),
@@ -313,7 +315,7 @@ select is(public.registrar_devolucion(current_setting('prueba.venta_mixta')::uui
     jsonb_build_array(jsonb_build_object('venta_detalle_id',
       (select id from public.venta_detalles where venta_id = current_setting('prueba.venta_mixta')::uuid), 'cantidad', 1)),
     'x', 'ABONO_FIADO', gen_random_uuid()) -> 'error' ->> 'codigo', 'DATOS_INVALIDOS',
-  'D14. El reintegro como abono a fiado llega con la Fase 9');
+  'D14. Una venta sin cliente no se reintegra como abono a fiado');
 
 -- $10,00 entre 3 unidades no da exacto: 3,33 + 3,33 + 3,34.
 select set_config('prueba.venta10', public.registrar_venta(

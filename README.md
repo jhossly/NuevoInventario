@@ -1,7 +1,7 @@
 # Bodega — inventario, ventas y caja
 
 Sistema web (PWA) para una bodega RIMPE Negocio Popular en Ecuador.
-Uso propio de un solo negocio. Estado: **Fase 8 — ventas**.
+Uso propio de un solo negocio. Estado: **Fase 9 — caja y fiado**.
 
 ## Requisitos en tu computadora (Windows)
 

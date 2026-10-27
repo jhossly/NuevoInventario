@@ -15,7 +15,7 @@ export const COMPROBANTES = {
 } as const;
 export type TipoComprobante = keyof typeof COMPROBANTES;
 
-export const MEDIOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TARJETA: 'Tarjeta' } as const;
+export const MEDIOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TARJETA: 'Tarjeta', FIADO: 'Fiado' } as const;
 export type Medio = keyof typeof MEDIOS;
 
 export const esquemaCliente = z.object({
@@ -75,6 +75,7 @@ const esquemaLineaVenta = z.object({
 });
 
 export const esquemaVenta = esquemaResumenVenta.extend({
+  cliente_id: uuid.nullable(),
   subtotal: decimal,
   descuento: decimal,
   iva: decimal,
@@ -152,7 +153,7 @@ export function useVentas() {
 
 // Solo columnas sin costos: el Vendedor no tiene permiso sobre las de costo (D-015).
 const COLUMNAS_VENTA = [
-  'id,fecha,creado_en,tipo_comprobante,estado,solicitud_anulacion,motivo_anulacion',
+  'id,fecha,creado_en,tipo_comprobante,estado,solicitud_anulacion,motivo_anulacion,cliente_id',
   'subtotal:subtotal::text,descuento:descuento::text,iva:iva::text,total:total::text',
   'clientes(nombre)',
   'venta_detalles(id,orden,cantidad:cantidad::text,precio_unitario:precio_unitario::text,' +
@@ -220,6 +221,9 @@ function useInvalidarTrasVenta() {
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: claves.ventas }),
+      // Caja y fiado cambian con ventas, anulaciones y devoluciones (Fase 9).
+      queryClient.invalidateQueries({ queryKey: ['caja'] }),
+      queryClient.invalidateQueries({ queryKey: ['fiado'] }),
       queryClient.invalidateQueries({ queryKey: clavesCatalogo.productos }),
       queryClient.invalidateQueries({ queryKey: ['inventario'] }),
     ]);
@@ -275,6 +279,7 @@ export interface DatosDevolucion {
   ventaId: string;
   lineas: { venta_detalle_id: string; cantidad: string }[];
   motivo: string;
+  forma: 'EFECTIVO' | 'ABONO_FIADO';
   clave: string;
 }
 
@@ -288,7 +293,7 @@ export function useRegistrarDevolucion() {
           p_venta_id: d.ventaId,
           p_lineas: d.lineas,
           p_motivo: d.motivo,
-          p_forma_reintegro: 'EFECTIVO',
+          p_forma_reintegro: d.forma,
           p_clave_idempotencia: d.clave,
         },
         z.object({ devolucion_id: uuid, repetido: z.boolean(), total: decimal }),

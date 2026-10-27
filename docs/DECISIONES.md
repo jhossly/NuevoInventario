@@ -36,6 +36,11 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-029 | 2026-10-30 | Anular una venta devuelve cada línea al costo con que salió; una venta con devoluciones no se anula. El Vendedor solo pide la anulación | HU-03 y Fase 3 (devolución al costo original) | Vigente |
 | D-030 | 2026-10-30 | Devoluciones parciales proporcionales; la última de una línea toma exactamente lo que faltaba para que la suma cuadre con la venta | Evita centavos perdidos (3,33 + 3,33 + 3,34) | Vigente |
 | D-031 | 2026-10-30 | Caja y fiado llegan en la Fase 9: hasta entonces se rechazan el pago FIADO y el reintegro ABONO_FIADO | Entregar ventas sin esperar caja | Vigente |
+| D-032 | 2026-10-31 | Cierre de caja a ciegas: el Vendedor escribe lo contado sin ver lo esperado; el esperado y la diferencia solo los ve el Dueño (columnas ocultas, `resumen_caja`), que puede explicarla una vez | Fase 4 («ver diferencia: solo Dueño»); evita ajustar el conteo al esperado | Vigente |
+| D-033 | 2026-10-31 | Efectivo esperado = fondo + ventas en efectivo + abonos de fiado en efectivo + ingresos − egresos. Anular o devolver en efectivo exige la caja abierta y deja un egreso automático en ella | HU-04; el dinero devuelto sale de la caja donde está, no de la caja de la venta | Vigente |
+| D-034 | 2026-10-31 | Fiado: el Vendedor solo fía a clientes autorizados y dentro del límite; el Dueño puede fiar a cualquier cliente. Se bloquea la fila del cliente para que ventas simultáneas no pasen el límite | Fase 4 (Dueño «Sí», Vendedor «solo autorizados y dentro del límite») | Vigente |
+| D-035 | 2026-10-31 | Anular una venta al fiado o devolver como ABONO_FIADO descuenta la deuda con un AJUSTE (no un ABONO, que es dinero recibido). El abono no supera lo que se debe; la devolución como abono tampoco | Fase 3: la cuenta se corrige con AJUSTE | Vigente |
+| D-036 | 2026-10-31 | Ventas por transferencia o tarjeta no exigen caja abierta; solo el efectivo | HU-04 habla de ventas en efectivo | Vigente (confirmar con el dueño) |
 
 ## Dependencias y por qué
 
