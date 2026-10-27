@@ -18,6 +18,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
+    "db:test:concurrencia": "bash supabase/tests/concurrencia/venta_ultima_unidad.sh",
     "db:nueva-migracion": "supabase migration new"
   },
   "dependencies": {

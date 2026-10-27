@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-29 (Fase 7 cerrada: compras probadas en local y en CI)
+Última actualización: 2026-10-30 (Fase 8: ventas listas y probadas en local; falta CI)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-025). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-031). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -43,7 +43,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
-| 8. Ventas | Siguiente |
+| 8. Ventas | Base de datos e interfaz probadas en local (195/195 pgTAP, 2 pruebas de concurrencia, navegador); **falta subir y CI** |
+| 9. Caja y fiado | Siguiente |
 
 ## Migraciones
 
@@ -52,6 +53,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261027000000_base_seguridad.sql` | Esquema `privado`, `empresas`, `perfiles`, `membresias`, `auditoria`, `mi_empresa()`, `mi_rol()`, `privado.ok()`/`privado.error()`, trigger de solo inserción, permisos y RLS, función `mi_contexto()` |
 | `20261028000000_catalogo_inventario.sql` | `categorias`, `productos`, `presentaciones`, `movimientos_inventario` (inmutable, con `secuencia`), `existencias` (costos ocultos por columna, D-020), `conteos`, `conteo_detalles` (congelados al confirmar). Motor `privado.registrar_movimiento` (promedio ponderado, bloqueo de fila, `STOCK_INSUFICIENTE`). `privado.fallar()` (errores de negocio con SQLSTATE `NG001`) y `privado.ve_costos()`. Expuestas: `guardar_categoria`, `eliminar_categoria`, `guardar_producto`, `guardar_presentacion`, `ajustar_inventario`, `inventario_valorizado`, `guardar_conteo`, `confirmar_conteo` |
 | `20261029000000_compras.sql` | `proveedores`, `compras` (solo pasa de CONFIRMADA a ANULADA), `compra_detalles` (inmutables). Tipo de movimiento `ANULACION_COMPRA`; `registrar_movimiento` recibe la fecha del documento. `privado.calcular_lineas_compra` (única fuente del cálculo), `privado.normalizar_documento`. Expuestas: `guardar_proveedor`, `calcular_compra` (vista previa), `registrar_compra`, `anular_compra` |
+| `20261030000000_ventas.sql` | `clientes`, `ventas` (solo admite pedir anulación o pasar a ANULADA), `venta_detalles`, `venta_pagos`, `devoluciones`, `devolucion_detalles` (inmutables). `empresas.monto_max_consumidor_final` (50) y `monto_max_sin_comprobante` (0). `privado.calcular_lineas_venta` (única fuente del cálculo, IVA incluido o no), `privado.explicar_error_venta`. Expuestas: `guardar_cliente`, `calcular_venta`, `registrar_venta`, `solicitar_anulacion_venta`, `anular_venta`, `registrar_devolucion`, `costos_venta`. Un reintento simultáneo con la misma clave devuelve la venta ya creada |
+
+Interfaz (Fase 8): inicio en «Vender» (punto de venta: buscar con 2 letras o escanear y Enter, +/−, kilos, descuento, comprobante, cliente con alta rápida, medio de pago, vuelto, «Cobrar» con candado contra doble toque `useUnSoloEnvio`); ventas (el Vendedor ve las suyas), detalle con costos y utilidad para el Dueño, anular, devolver, pedir anulación; clientes. Menú para ambos roles: Vender, Ventas, Productos (+ Compras para el Dueño).
 
 Interfaz (Fase 7): menú Productos / Compras para el Dueño; lista de compras, nueva compra (con o sin respaldo, alta rápida de proveedor, líneas por presentación con costo sin IVA y descuento, vista previa calculada por la base, clave de idempotencia por compra), detalle con anulación, proveedores.
 
@@ -77,6 +81,9 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-29 | Windows 11 del usuario: Supabase local | `003_compras` (46: Fase 3 y HU-01, descuento antes del IVA, IVA como costo o no, libra → kg, respaldo, documento repetido y normalizado, idempotencia, fecha futura, todo o nada, anulación al promedio y su límite, inmutabilidad, permisos) | **132/132 pasan** (24 + 62 + 46). Mutación: IVA sin restar el descuento y compra anulada que vuelve a confirmarse → fallan C3 e I4 |
 | 2026-10-29 | GitHub Actions, run 40553769987, commit `3aa9844` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la migración de compras | **Pasan los dos** |
 | 2026-10-29 | Navegador integrado, celular, datos del seed | Dueño: compra de 2 cajas de aceite con factura `1-1-456` (vista previa $55,20 + $8,28 = $63,48; 24 u a $2,645; stock 34 a $2,455294), anulación con motivo, lista con «anulada». Vendedor: Compras bloqueado y sin menú | **Todo funciona**; las llamadas de la app responden 200 |
+| 2026-10-30 | Windows 11 del usuario: Supabase local | `004_ventas` (63: Fase 3 y HU-02/HU-03, descuento, precios sin IVA, stock, idempotencia, pagos, comprobante, Vendedor, devoluciones que cuadran, anulación, inmutabilidad, aislamiento) | **195/195 pasan**. Mutación: sin tope de descuento → falla C5; última devolución proporcional → falla D15 |
+| 2026-10-30 | Windows 11 del usuario: `npm run db:test:concurrencia` (dos conexiones) | 1) última unidad vendida a la vez; 2) dos «Cobrar» simultáneos con la misma clave | **2/2 pasan**. Sin bloqueo de fila ni insert previo, la 1 falla (DATOS_INVALIDOS en vez de STOCK_INSUFICIENTE) |
+| 2026-10-30 | Navegador, 1200 px, datos del seed | Vendedor: buscar + Enter, escanear código, queso 1,25 kg, total $13,45, descuento rechazado (tope 0 %), vuelto $6,55, doble clic en «Cobrar» → una venta, pedir anulación. Dueño: costo y utilidad, anular, vender 3 Colas escaneando y devolver 1 | **Todo funciona**. Se encontró y corrigió: el doble clic mostraba «El registro ya existe» (la venta sí era una sola) |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
@@ -84,6 +91,8 @@ Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó
 ## Errores conocidos
 
 Ninguno abierto. Resueltos:
+
+- Doble toque en «Cobrar»: la segunda llamada simultánea con la misma clave chocaba con la unicidad y la pantalla mostraba «El registro ya existe» (la base guardaba una sola venta). Corregido en la base (devuelve la venta existente) y en la interfaz (`useUnSoloEnvio`). `registrar_compra` y `ajustar_inventario` aún responden DUPLICADO en esa carrera; la interfaz ya la evita (ver Riesgos).
 
 - Docker Desktop no arrancaba: faltaba "Plataforma de máquina virtual" para WSL 2. Se arregló con `wsl --install --no-distribution` (como administrador) y reinicio.
 - El primer `supabase start` falló una vez con `DbSetupError` (contenedor sobrante de un arranque interrumpido); al reintentar funcionó sin cambios. Si se repite: `npx supabase stop` y volver a `npx supabase start`.
@@ -108,9 +117,14 @@ Ninguno abierto. Resueltos:
 - `existencias_cantidad_no_negativa` impide stock negativo; si el dueño activa `permitir_venta_sin_stock` (D-004), habrá que quitar esa restricción en una migración.
 - La interfaz debe pedir columnas explícitas de `existencias`: `select *` falla por el permiso por columna (D-020).
 - El paquete JS pesa más de 500 kB (supabase-js + zod + React). Dividirlo por pantallas cuando lleguen ventas y caja.
+- `registrar_compra` y `ajustar_inventario` responden DUPLICADO (no la operación existente) si dos pedidos con la misma clave llegan exactamente a la vez; los datos quedan bien. Igualar a ventas en una migración futura.
+- La utilidad de una venta en su detalle no descuenta las devoluciones; los reportes (Fase 10) deben usar ventas − devoluciones.
+- Docker Desktop puede apagarse al suspender la PC: si `supabase` dice que no encuentra el motor, abrir Docker Desktop y esperar.
 - Sin pruebas automáticas de componentes React (no hay jsdom ni Testing Library): las pantallas se probaron a mano en el navegador. Reevaluar en la Fase 8 (D-018).
 
 ## Próximas tareas
 
-1. Fase 8: ventas de mostrador (`clientes`, `ventas`, `venta_detalles`, `registrar_venta` con precios con IVA incluido, bloqueo sin stock, costo de venta copiado), anulaciones y devoluciones; prueba de dos ventas simultáneas de la última unidad con dos conexiones.
-2. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
+1. Subir los commits de ventas (`git push`) y confirmar el CI (incluye ahora la prueba de concurrencia).
+2. Fase 9: caja (apertura, cierre, diferencia; `ventas.caja_id`) y fiado (cuentas por cobrar, límite, abonos, pago FIADO y reintegro ABONO_FIADO).
+3. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
+4. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.

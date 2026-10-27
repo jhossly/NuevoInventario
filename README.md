@@ -1,7 +1,7 @@
 # Bodega — inventario, ventas y caja
 
 Sistema web (PWA) para una bodega RIMPE Negocio Popular en Ecuador.
-Uso propio de un solo negocio. Estado: **Fase 7 — compras**.
+Uso propio de un solo negocio. Estado: **Fase 8 — ventas**.
 
 ## Requisitos en tu computadora (Windows)
 
@@ -35,7 +35,8 @@ npx supabase start
 copy .env.example .env.local
 
 # 6. Pruebas
-npm run db:test      # seguridad de la base (pgTAP)
+npm run db:test      # seguridad y reglas de la base (pgTAP)
+npm run db:test:concurrencia  # dos ventas a la vez (necesita Supabase encendido)
 npm test             # reglas en TypeScript (Vitest)
 npm run typecheck    # tipos
 

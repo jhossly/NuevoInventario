@@ -54,6 +54,23 @@ export function paraEditar(valor: string): string {
   return sinCeros.replace('.', ',');
 }
 
+/**
+ * Vuelto: lo recibido menos el total, en centavos exactos (sin `number`).
+ * Es una resta para mostrar en pantalla, no un cálculo de negocio (D-011).
+ * Ambos valores deben venir ya validados con 2 decimales como máximo.
+ */
+export function restarDinero(recibido: string, total: string): string {
+  const centavos = (v: string): bigint => {
+    const [enteros = '0', fraccion = ''] = v.replace('-', '').split('.');
+    const absoluto = BigInt(enteros) * 100n + BigInt((fraccion + '00').slice(0, 2));
+    return v.startsWith('-') ? -absoluto : absoluto;
+  };
+  const diferencia = centavos(recibido) - centavos(total);
+  const absoluto = diferencia < 0n ? -diferencia : diferencia;
+  const texto = `${absoluto / 100n}.${String(absoluto % 100n).padStart(2, '0')}`;
+  return diferencia < 0n ? `-${texto}` : texto;
+}
+
 /** Cambia el signo de un decimal ya normalizado ("2" → "-2"). */
 export function negar(valor: string): string {
   if (/^-?0(\.0+)?$/.test(valor)) return valor.replace('-', '');

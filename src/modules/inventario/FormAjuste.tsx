@@ -3,6 +3,7 @@ import { UNIDADES, stockDe, useProducto, type Producto } from '@/modules/catalog
 import { leerDecimal, negar } from '@/shared/decimal';
 import { formatearCantidad } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
+import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { useAjustar, type TipoAjuste } from './api';
@@ -25,6 +26,7 @@ const AYUDA: Record<TipoAjuste, string> = {
 
 function FormAjuste({ producto }: { producto: Producto }) {
   const ajustar = useAjustar();
+  const unaVez = useUnSoloEnvio();
   const unidad = UNIDADES[producto.unidad_base];
   const sinStock = Number(stockDe(producto)) === 0;
 
@@ -61,7 +63,7 @@ function FormAjuste({ producto }: { producto: Producto }) {
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0 || !cantidadLeida.ok) return;
 
-    ajustar.mutate(
+    unaVez((terminar) => ajustar.mutate(
       {
         productoId: producto.id,
         tipo,
@@ -79,8 +81,9 @@ function FormAjuste({ producto }: { producto: Producto }) {
           setClave(nuevaClave());
           if (tipo === 'APERTURA') setTipo('AJUSTE');
         },
+        onSettled: terminar,
       },
-    );
+    ));
   };
 
   return (

@@ -15,6 +15,10 @@ export type Ruta =
   | { nombre: 'compra-nueva' }
   | { nombre: 'compra'; id: string }
   | { nombre: 'proveedores' }
+  | { nombre: 'vender' }
+  | { nombre: 'ventas' }
+  | { nombre: 'venta'; id: string }
+  | { nombre: 'clientes' }
   | { nombre: 'no-encontrada' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,9 +28,17 @@ export function leerRuta(hash: string): Ruta {
   const [primera, segunda, tercera, ...resto] = partes;
 
   if (resto.length > 0) return { nombre: 'no-encontrada' };
-  if (primera === undefined) return { nombre: 'productos' };
+  // Inicio: el punto de venta, lo que más se usa (HU-02).
+  if (primera === undefined) return { nombre: 'vender' };
   if (primera === 'conteo' && segunda === undefined) return { nombre: 'conteo' };
   if (primera === 'proveedores' && segunda === undefined) return { nombre: 'proveedores' };
+  if (primera === 'vender' && segunda === undefined) return { nombre: 'vender' };
+  if (primera === 'clientes' && segunda === undefined) return { nombre: 'clientes' };
+  if (primera === 'ventas') {
+    if (tercera !== undefined) return { nombre: 'no-encontrada' };
+    if (segunda === undefined) return { nombre: 'ventas' };
+    return UUID.test(segunda) ? { nombre: 'venta', id: segunda } : { nombre: 'no-encontrada' };
+  }
   if (primera === 'compras') {
     if (tercera !== undefined) return { nombre: 'no-encontrada' };
     if (segunda === undefined) return { nombre: 'compras' };
@@ -66,6 +78,14 @@ export function enlace(ruta: Ruta): string {
       return `#/compras/${ruta.id}`;
     case 'proveedores':
       return '#/proveedores';
+    case 'vender':
+      return '#/vender';
+    case 'ventas':
+      return '#/ventas';
+    case 'venta':
+      return `#/ventas/${ruta.id}`;
+    case 'clientes':
+      return '#/clientes';
   }
 }
 

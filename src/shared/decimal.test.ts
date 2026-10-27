@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leerDecimal, negar, paraEditar } from './decimal';
+import { leerDecimal, negar, paraEditar, restarDinero } from './decimal';
 
 describe('leerDecimal', () => {
   it('acepta coma o punto y devuelve texto con punto', () => {
@@ -49,6 +49,18 @@ describe('paraEditar', () => {
     for (const v of ['3.45', '0.907', '45.359237']) {
       expect(leerDecimal(paraEditar(v), { decimales: 6 })).toEqual({ ok: true, valor: v });
     }
+  });
+});
+
+describe('restarDinero', () => {
+  it('calcula el vuelto en centavos exactos', () => {
+    expect(restarDinero('20', '7.50')).toBe('12.50');
+    expect(restarDinero('10.35', '10.35')).toBe('0.00');
+    expect(restarDinero('0.3', '0.1')).toBe('0.20');
+  });
+
+  it('indica cuánto falta con signo negativo', () => {
+    expect(restarDinero('5', '7.5')).toBe('-2.50');
   });
 });
 

@@ -3,6 +3,7 @@ import { UNIDADES, useProductos, type Presentacion, type Producto } from '@/modu
 import { leerDecimal } from '@/shared/decimal';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
+import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { ErrorDeNegocio } from '@/shared/rpc';
@@ -52,6 +53,7 @@ export function NuevaCompra() {
   const productos = useProductos();
   const proveedores = useProveedores();
   const registrar = useRegistrarCompra();
+  const unaVez = useUnSoloEnvio();
 
   const [conRespaldo, setConRespaldo] = useState(true);
   const [proveedorId, setProveedorId] = useState('');
@@ -104,7 +106,7 @@ export function NuevaCompra() {
       setErrorCabecera(lineas.length === 0 ? 'Agrega al menos un producto.' : 'Revisa las líneas marcadas.');
       return;
     }
-    registrar.mutate(
+    unaVez((terminar) => registrar.mutate(
       {
         proveedorId: proveedorId || null,
         conRespaldo,
@@ -113,8 +115,8 @@ export function NuevaCompra() {
         lineas: paraEnviar,
         clave,
       },
-      { onSuccess: (r) => navegar({ nombre: 'compra', id: r.compra_id }) },
-    );
+      { onSuccess: (r) => navegar({ nombre: 'compra', id: r.compra_id }), onSettled: terminar },
+    ));
   };
 
   if (productos.isPending || proveedores.isPending) return <Cargando />;

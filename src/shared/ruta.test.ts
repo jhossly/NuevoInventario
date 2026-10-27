@@ -5,9 +5,9 @@ import { nuevaClave } from './uuid';
 const ID = 'f4ebe992-933c-4c1a-b528-3251f5e9ffb7';
 
 describe('leerRuta', () => {
-  it('lleva al listado de productos por defecto', () => {
-    expect(leerRuta('')).toEqual({ nombre: 'productos' });
-    expect(leerRuta('#/')).toEqual({ nombre: 'productos' });
+  it('lleva al punto de venta por defecto', () => {
+    expect(leerRuta('')).toEqual({ nombre: 'vender' });
+    expect(leerRuta('#/')).toEqual({ nombre: 'vender' });
   });
 
   it('lee cada pantalla y vuelve a construir su enlace', () => {
@@ -22,6 +22,10 @@ describe('leerRuta', () => {
       { nombre: 'compra-nueva' },
       { nombre: 'compra', id: ID },
       { nombre: 'proveedores' },
+      { nombre: 'vender' },
+      { nombre: 'ventas' },
+      { nombre: 'venta', id: ID },
+      { nombre: 'clientes' },
     ];
     for (const ruta of rutas) expect(leerRuta(enlace(ruta))).toEqual(ruta);
   });
@@ -29,7 +33,8 @@ describe('leerRuta', () => {
   it('no acepta ids que no son uuid ni rutas desconocidas', () => {
     expect(leerRuta('#/productos/123')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta(`#/productos/${ID}/borrar`)).toEqual({ nombre: 'no-encontrada' });
-    expect(leerRuta('#/ventas')).toEqual({ nombre: 'no-encontrada' });
+    expect(leerRuta('#/caja')).toEqual({ nombre: 'no-encontrada' });
+    expect(leerRuta('#/ventas/123')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta('#/compras/abc')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta(`#/compras/${ID}/editar`)).toEqual({ nombre: 'no-encontrada' });
   });

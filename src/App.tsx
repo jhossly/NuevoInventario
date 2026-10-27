@@ -3,6 +3,10 @@ import { DetalleCompra } from '@/modules/compras/DetalleCompra';
 import { ListaCompras } from '@/modules/compras/ListaCompras';
 import { NuevaCompra } from '@/modules/compras/NuevaCompra';
 import { Proveedores } from '@/modules/compras/Proveedores';
+import { Clientes } from '@/modules/ventas/Clientes';
+import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
+import { ListaVentas } from '@/modules/ventas/ListaVentas';
+import { PuntoVenta } from '@/modules/ventas/PuntoVenta';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
@@ -46,13 +50,20 @@ export function App() {
   }
 }
 
-const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][] }[] = [
+const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDueno?: boolean }[] = [
+  { titulo: 'Vender', ruta: { nombre: 'vender' }, incluye: ['vender'] },
+  { titulo: 'Ventas', ruta: { nombre: 'ventas' }, incluye: ['ventas', 'venta', 'clientes'] },
   {
     titulo: 'Productos',
     ruta: { nombre: 'productos' },
     incluye: ['productos', 'producto-nuevo', 'producto', 'ajuste', 'kardex', 'conteo'],
   },
-  { titulo: 'Compras', ruta: { nombre: 'compras' }, incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'] },
+  {
+    titulo: 'Compras',
+    ruta: { nombre: 'compras' },
+    incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'],
+    soloDueno: true,
+  },
 ];
 
 function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
@@ -61,12 +72,11 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
   return (
     <div className="min-h-dvh">
       <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-2">
-          <a href={enlace({ nombre: 'productos' })} className="flex-1 truncate font-semibold">
+        <div className="mx-auto flex max-w-5xl items-center gap-1 px-4 py-2 sm:gap-3">
+          <a href={enlace({ nombre: 'vender' })} className="flex-1 truncate font-semibold">
             {contexto.nombre}
           </a>
-          {esDueno &&
-            SECCIONES.map((s) => (
+          {SECCIONES.filter((s) => esDueno || !s.soloDueno).map((s) => (
               <a
                 key={s.titulo}
                 href={enlace(s.ruta)}
@@ -75,7 +85,7 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
               >
                 {s.titulo}
               </a>
-            ))}
+          ))}
           <span className="hidden text-sm text-gray-500 md:inline">
             {correo} · {contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}
           </span>
@@ -84,7 +94,7 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
           </Boton>
         </div>
       </nav>
-      <main className="mx-auto max-w-3xl p-4">
+      <main className="mx-auto max-w-5xl p-4">
         <Pantalla ruta={ruta} esDueno={esDueno} />
       </main>
     </div>
@@ -125,6 +135,14 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<DetalleCompra id={ruta.id} />);
     case 'proveedores':
       return soloDueno(<Proveedores />);
+    case 'vender':
+      return <PuntoVenta />;
+    case 'ventas':
+      return <ListaVentas />;
+    case 'venta':
+      return <DetalleVenta id={ruta.id} />;
+    case 'clientes':
+      return <Clientes />;
     case 'no-encontrada':
       return (
         <Tarjeta>

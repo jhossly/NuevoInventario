@@ -30,6 +30,12 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-023 | 2026-10-29 | Anular una compra saca sus unidades al costo promedio vigente (movimiento ANULACION_COMPRA); si ya se vendió parte, no se anula y se corrige con un ajuste | Mismo motor para toda salida; el valor del inventario nunca queda negativo | Vigente (confirmar con contador) |
 | D-024 | 2026-10-29 | Los cálculos de una compra viven solo en `privado.calcular_lineas_compra`; la vista previa de la interfaz usa `calcular_compra`, que no guarda | D-011 sin duplicar redondeos en TypeScript | Vigente |
 | D-025 | 2026-10-29 | Compra en un solo paso (se registra ya confirmada, sin borrador); el número de documento del SRI se normaliza (`1-1-123` → `001-001-000000123`) y no se repite por proveedor salvo que la anterior esté anulada | El dueño registra la factura que tiene en la mano; evita duplicados por formato | Vigente |
+| D-026 | 2026-10-30 | Venta: el precio sale del catálogo (no se cambia en la venta; se usa el descuento, en dinero). Vendedor con tope `descuento_max_vendedor` | Precios controlados por el Dueño (Fase 4) | Vigente |
+| D-027 | 2026-10-30 | Comprobante: factura sin cliente identificado solo hasta `monto_max_consumidor_final` ($50, Decreto 586); «sin comprobante» solo hasta `monto_max_sin_comprobante` (0 = nunca) | D-005; montos configurables por el contador | Vigente (confirmar con contador) |
+| D-028 | 2026-10-30 | Costos de ventas ocultos al Vendedor por columna; el Dueño los lee con `costos_venta()`. El Vendedor ve solo sus ventas | Igual que D-020 | Vigente |
+| D-029 | 2026-10-30 | Anular una venta devuelve cada línea al costo con que salió; una venta con devoluciones no se anula. El Vendedor solo pide la anulación | HU-03 y Fase 3 (devolución al costo original) | Vigente |
+| D-030 | 2026-10-30 | Devoluciones parciales proporcionales; la última de una línea toma exactamente lo que faltaba para que la suma cuadre con la venta | Evita centavos perdidos (3,33 + 3,33 + 3,34) | Vigente |
+| D-031 | 2026-10-30 | Caja y fiado llegan en la Fase 9: hasta entonces se rechazan el pago FIADO y el reintegro ABONO_FIADO | Entregar ventas sin esperar caja | Vigente |
 
 ## Dependencias y por qué
 
