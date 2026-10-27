@@ -27,6 +27,7 @@ export const esquemaProducto = z.object({
   codigo_principal: z.string().nullable(),
   codigo_auxiliar: z.string().nullable(),
   informacion_adicional: z.string().nullable(),
+  controla_stock: z.boolean(),
   stock_minimo: decimal,
   activo: z.boolean(),
   categoria_id: uuid.nullable(),
@@ -55,6 +56,7 @@ const COLUMNAS_PRODUCTO = [
   'codigo_principal',
   'codigo_auxiliar',
   'informacion_adicional',
+  'controla_stock',
   'stock_minimo:stock_minimo::text',
   'activo',
   'categoria_id',
@@ -98,7 +100,7 @@ export function presentacionBase(producto: Producto): Presentacion | undefined {
 
 export function bajoStock(producto: Producto): boolean {
   const minimo = Number(producto.stock_minimo);
-  return producto.activo && minimo > 0 && Number(stockDe(producto)) <= minimo;
+  return producto.activo && producto.controla_stock && minimo > 0 && Number(stockDe(producto)) <= minimo;
 }
 
 /** Orden estable: la base primero, luego por factor. */
@@ -148,6 +150,9 @@ export interface DatosProducto {
   codigo_principal?: string | null;
   codigo_auxiliar?: string | null;
   informacion_adicional?: string | null;
+  controla_stock?: boolean;
+  // Costo por unidad de un producto sin stock (D-046); null lo borra.
+  costo_servicio?: string | null;
   precio_venta?: string | null;
   codigo_barras?: string | null;
 }

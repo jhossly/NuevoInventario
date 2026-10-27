@@ -122,12 +122,16 @@ export function ListaProductos() {
                     {costo?.costo_promedio && ` · costo ${formatearCosto(costo.costo_promedio)}`}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={`font-semibold tabular-nums ${bajo ? 'text-red-700' : ''}`}>
-                    {formatearCantidad(stockDe(p))}
-                  </p>
-                  <p className="text-xs text-gray-500">{bajo ? 'bajo stock' : UNIDADES[p.unidad_base]}</p>
-                </div>
+                {p.controla_stock ? (
+                  <div className="text-right">
+                    <p className={`font-semibold tabular-nums ${bajo ? 'text-red-700' : ''}`}>
+                      {formatearCantidad(stockDe(p))}
+                    </p>
+                    <p className="text-xs text-gray-500">{bajo ? 'bajo stock' : UNIDADES[p.unidad_base]}</p>
+                  </div>
+                ) : (
+                  <p className="text-right text-xs text-gray-500">sin stock</p>
+                )}
               </a>
             </li>
           );

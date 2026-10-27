@@ -44,7 +44,7 @@ function FormConteo({
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [mensaje, setMensaje] = useState<string | null>(null);
 
-  const activos = useMemo(() => productos.filter((p) => p.activo), [productos]);
+  const activos = useMemo(() => productos.filter((p) => p.activo && p.controla_stock), [productos]);
   const visibles = activos.filter((p) => p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()));
   const escritos = Object.entries(contado).filter(([, v]) => v.trim() !== '');
 

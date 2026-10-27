@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (productos con datos del SRI e IVA de ventas por fecha; CI en verde)
+Última actualización: 2026-10-27 (productos sin control de stock: recargas y servicios; sin push)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-045). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-046). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -61,6 +61,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261101000000_reportes.sql` | `empresas.limite_ingresos_rimpe` (20000). `privado.error_periodo`, `privado.lineas_netas` (ventas confirmadas − devoluciones, por línea). Expuestas, solo Dueño: `reporte_ventas`, `reporte_margen`, `acumulado_rimpe`, `exportacion_contador` |
 | `20261102000000_comprobantes_sri.sql` | `comprobantes` (XML guardado; solo se vincula una vez; se descarta si no tiene venta), `comprobante_lineas` (solo cambia el producto asociado, antes del vínculo), `codigos_sri` (memoria código → presentación). Lectores `privado.xml_texto`, `xml_interno` (CDATA o escapado), `xml_numero`, `digito_clave_acceso` (módulo 11). Expuestas, solo Dueño: `importar_comprobante`, `asociar_linea_comprobante`, `candidatos_comprobante`, `vincular_comprobante`, `crear_venta_de_comprobante`, `descartar_comprobante` |
 | `20261103000000_productos_sri_iva.sql` | Productos con `codigo_principal` (único por bodega), `codigo_auxiliar` (25 caracteres), `informacion_adicional` (300) y `codigo_iva` del SRI (0, 5, 4 = 15 %, 6 = No objeto, 7 = Exento); `tarifa_iva` se deriva por trigger. `venta_detalles.codigo_iva`. Trigger que asocia líneas de facturas del SRI por código principal o auxiliar. `iva_ventas_periodos` + `privado.iva_cero_en`. Expuestas: `fijar_iva_ventas`, `quitar_iva_ventas` (solo Dueño); nuevas versiones de `guardar_producto` y `privado.calcular_lineas_venta` (IVA 0 % mientras rija) |
+| `20261104000000_productos_sin_stock.sql` | `productos.controla_stock`. Nuevas versiones de `privado.registrar_movimiento` (sin control de stock: no toca existencias ni kardex, costo = `existencias.ultimo_costo` o 0; la compra actualiza ese costo; apertura/ajuste/merma/conteo se rechazan), `guardar_producto` (claves `controla_stock` y `costo_servicio`; solo se apaga con stock en cero) e `inventario_valorizado` (devuelve `controla_stock` y `ultimo_costo`) |
+
+Interfaz (sin stock): casilla «Controla stock» en el producto; sin ella, «Costo por unidad» en lugar del stock mínimo. La ficha dice «No controla stock» con su costo (sin ajuste ni kardex); la lista muestra «sin stock», «Vender» dice «Sin control de stock» y el conteo no los incluye.
 
 Interfaz (productos SRI e IVA): el formulario de producto tiene «Tarifa IVA» (0 %, 5 %, 15 %, No objeto de impuesto, Exento de IVA), código principal y auxiliar e información adicional; la lista de productos y «Vender» encuentran por esos códigos. Pantalla «IVA de ventas» (desde Reportes, solo Dueño): estado de hoy, «desde tal fecha las ventas van con IVA 0 % / con la tarifa de cada producto», historial y quitar cambios futuros. «Vender» avisa «Las ventas van con IVA 0 %» mientras rija.
 
@@ -107,6 +110,8 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-11-02 | Supabase local, transacción revertida, con 2 XML reales del dueño (no se guardan en el repositorio) | Factura emitida 001-100-000001529 (firmada, sin sobre de autorización, 17 líneas, IVA 0 %) y factura de un proveedor (con sobre y CDATA) | **Emitida: se importa, no se duplica y crea la venta** ($48,60, 17 líneas, 51 u, efectivo, sin caja, 17 códigos recordados). **Proveedor: rechazada por otro RUC**, como corresponde |
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `008_productos_sri_iva` (34: las 5 tarifas y su código, códigos SRI únicos y de 25 caracteres, IVA 0 % por fecha en venta y vista previa sin tocar la tarifa ni ventas pasadas, exento sigue exento, corregir el día, cambio futuro y quitarlo, permisos, aislamiento, asociación de facturas por código principal/auxiliar) | **344/344 pasan**. Mutación: `iva_cero_en` siempre falso y sin trigger de asociación → fallan V5, V6, V10, V13 y C1 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: «IVA de ventas» → desde hoy IVA 0 % (vigente, historial); «Vender» muestra el aviso y el aceite de $3,45 sale con IVA $0,00; alta de «Recarga Claro $1» con No objeto, código REC128 e información adicional; «rec128» la encuentra en «Vender». Typecheck y Vitest (49) pasan | **Todo funciona**. La base local quedó con IVA 0 % desde hoy |
+| 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
+| 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | GitHub Actions, run 40592019023, commit `43a0f5f` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `008_productos_sri_iva`) + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
@@ -142,7 +147,7 @@ Ninguno abierto. Resueltos:
 
 - **Hallazgos con XML reales (2026-11-02), a decidir con el dueño y el contador:**
   - **IVA de las ventas.** Resuelto con D-045: el dueño fija «desde tal fecha, IVA 0 %» en «IVA de ventas» (antes cobraba IVA; hoy factura todo con 0 %). **Confirmar con el contador** la fecha desde la que rige. Pendiente: la exportación y el resumen de IVA suman 0 %, No objeto y Exento en «base 0 %»; separarlos con `venta_detalles.codigo_iva` si el contador lo pide.
-  - **Recargas telefónicas.** La factura incluye «RECARGA CLARO GIGAS»: es un servicio, no algo con stock. Hoy todo producto controla stock y la venta se bloquearía. Hace falta un tipo de producto sin control de stock (servicio).
+  - **Recargas telefónicas.** Resuelto con D-046: productos sin control de stock, con costo por unidad para la utilidad.
   - **Códigos internos.** El portal del SRI usa códigos propios del dueño (0065, REC128…), no códigos de barras. Si el producto tiene ese código principal (o auxiliar), la línea se asocia sola (D-044); si no, se asocia a mano una vez y se recuerda. Falta: crear el producto desde la línea.
   - La factura emitida llega **firmada pero sin el sobre de autorización**; se acepta (el importador lee ambos formatos).
   - Si más adelante se importan facturas de **proveedores como compras**: traen ICE (código 3) e IRBPNR por botellas (código 5) que suman al total, el código de barras viene en `codigoAuxiliar` y hay líneas de bonificación a precio 0.
@@ -163,6 +168,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Decidir con el dueño los hallazgos que faltan de los XML reales (ver Riesgos): productos sin stock (recargas) y crear el producto desde una línea de factura.
+1. Push y CI de los productos sin stock (local adelante de `origin` por 2 commits). Pendiente de los XML reales: crear el producto desde una línea de factura.
 2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
 3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.

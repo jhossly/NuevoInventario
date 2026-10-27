@@ -20,10 +20,22 @@ interface Errores {
   nombre?: string;
   stock_minimo?: string;
   precio_venta?: string;
+  costo_servicio?: string;
 }
 
-/** Crear (sin `producto`) o editar un producto. */
-export function FormProducto({ producto, alGuardar }: { producto?: Producto; alGuardar?: () => void }) {
+/**
+ * Crear (sin `producto`) o editar un producto. `costoServicio` es el costo
+ * por unidad de un producto sin stock, para quien ve costos (D-046).
+ */
+export function FormProducto({
+  producto,
+  costoServicio,
+  alGuardar,
+}: {
+  producto?: Producto;
+  costoServicio?: string | null;
+  alGuardar?: () => void;
+}) {
   const editando = Boolean(producto);
   const categorias = useCategorias();
   const guardar = useGuardarProducto();
@@ -38,6 +50,8 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
   const [informacion, setInformacion] = useState(producto?.informacion_adicional ?? '');
   const [stockMinimo, setStockMinimo] = useState(producto ? paraEditar(producto.stock_minimo) : '0');
   const [activo, setActivo] = useState(producto?.activo ?? true);
+  const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? true);
+  const [costo, setCosto] = useState(costoServicio ? paraEditar(costoServicio) : '');
   const [precio, setPrecio] = useState('');
   const [codigo, setCodigo] = useState('');
   const [nuevaCategoria, setNuevaCategoria] = useState<string | null>(null);
@@ -54,6 +68,8 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
     if (!minimo.ok) nuevos.stock_minimo = minimo.mensaje;
     const precioLeido = !editando && precio.trim() !== '' ? leerDecimal(precio, { decimales: 2 }) : null;
     if (precioLeido && !precioLeido.ok) nuevos.precio_venta = precioLeido.mensaje;
+    const costoLeido = !controlaStock && costo.trim() !== '' ? leerDecimal(costo, { decimales: 6 }) : null;
+    if (costoLeido && !costoLeido.ok) nuevos.costo_servicio = costoLeido.mensaje;
 
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0 || !minimo.ok) return;
@@ -67,7 +83,12 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
       codigo_principal: codigoPrincipal.trim() || null,
       codigo_auxiliar: codigoAuxiliar.trim() || null,
       informacion_adicional: informacion.trim() || null,
+      controla_stock: controlaStock,
     };
+    // Quien no ve costos no recibe el costo actual: no lo borra al guardar.
+    if (!controlaStock && (costoServicio !== undefined || !editando)) {
+      datos.costo_servicio = costoLeido?.ok ? costoLeido.valor : null;
+    }
     if (editando) datos.activo = activo;
     else {
       datos.precio_venta = precioLeido?.ok ? precioLeido.valor : null;
@@ -190,14 +211,33 @@ export function FormProducto({ producto, alGuardar }: { producto?: Producto; alG
         autoComplete="off"
       />
 
-      <Campo
-        etiqueta={`Stock mínimo (${unidad === 'KG' ? 'kg' : 'unidades'})`}
-        ayuda="Avisa cuando el stock llega a este número. 0 = sin aviso."
-        inputMode="decimal"
-        value={stockMinimo}
-        onChange={(e) => setStockMinimo(e.target.value)}
-        error={errores.stock_minimo}
+      <Casilla
+        etiqueta="Controla stock (desmarca para recargas y servicios)"
+        checked={controlaStock}
+        onChange={(e) => setControlaStock(e.target.checked)}
       />
+
+      {controlaStock ? (
+        <Campo
+          etiqueta={`Stock mínimo (${unidad === 'KG' ? 'kg' : 'unidades'})`}
+          ayuda="Avisa cuando el stock llega a este número. 0 = sin aviso."
+          inputMode="decimal"
+          value={stockMinimo}
+          onChange={(e) => setStockMinimo(e.target.value)}
+          error={errores.stock_minimo}
+        />
+      ) : (
+        (costoServicio !== undefined || !editando) && (
+          <Campo
+            etiqueta={`Costo por ${unidad === 'KG' ? 'kilo' : 'unidad'}`}
+            ayuda="Lo que te cuesta (por ejemplo $0,95 por una recarga de $1). Sirve para la utilidad; las compras lo actualizan."
+            inputMode="decimal"
+            value={costo}
+            onChange={(e) => setCosto(e.target.value)}
+            error={errores.costo_servicio}
+          />
+        )
+      )}
 
       {!editando && (
         <div className="grid grid-cols-2 gap-3">

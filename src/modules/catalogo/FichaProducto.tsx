@@ -36,49 +36,67 @@ function Ficha({ producto }: { producto: Producto }) {
     <>
       <Encabezado titulo={producto.nombre} volver={enlace({ nombre: 'productos' })} />
 
-      <Tarjeta className="mb-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Stock</p>
-            <p className={`text-3xl font-semibold tabular-nums ${bajoStock(producto) ? 'text-red-700' : ''}`}>
-              {formatearCantidad(stockDe(producto))} <span className="text-base font-normal text-gray-500">{unidad}</span>
+      {!producto.controla_stock ? (
+        <Tarjeta className="mb-4">
+          <p className="font-medium">No controla stock</p>
+          <p className="text-sm text-gray-600">Se vende sin existencias, como una recarga o un servicio.</p>
+          {costo && (
+            <p className="mt-2 text-sm">
+              Costo por unidad:{' '}
+              <span className="tabular-nums">{costo.ultimo_costo ? formatearCosto(costo.ultimo_costo) : 'sin costo ($0)'}</span>
             </p>
-            {bajoStock(producto) && (
-              <p className="text-sm text-red-700">
-                Bajo stock (mínimo {formatearCantidad(producto.stock_minimo)})
+          )}
+        </Tarjeta>
+      ) : (
+        <Tarjeta className="mb-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Stock</p>
+              <p className={`text-3xl font-semibold tabular-nums ${bajoStock(producto) ? 'text-red-700' : ''}`}>
+                {formatearCantidad(stockDe(producto))} <span className="text-base font-normal text-gray-500">{unidad}</span>
               </p>
+              {bajoStock(producto) && (
+                <p className="text-sm text-red-700">
+                  Bajo stock (mínimo {formatearCantidad(producto.stock_minimo)})
+                </p>
+              )}
+            </div>
+            {costo && (
+              <dl className="grid grid-cols-2 gap-x-4 text-sm">
+                <dt className="text-gray-500">Costo promedio</dt>
+                <dd className="text-right tabular-nums">{costo.costo_promedio ? formatearCosto(costo.costo_promedio) : '—'}</dd>
+                <dt className="text-gray-500">Valor</dt>
+                <dd className="text-right tabular-nums">{formatearCosto(costo.valor_total)}</dd>
+              </dl>
             )}
           </div>
-          {costo && (
-            <dl className="grid grid-cols-2 gap-x-4 text-sm">
-              <dt className="text-gray-500">Costo promedio</dt>
-              <dd className="text-right tabular-nums">{costo.costo_promedio ? formatearCosto(costo.costo_promedio) : '—'}</dd>
-              <dt className="text-gray-500">Valor</dt>
-              <dd className="text-right tabular-nums">{formatearCosto(costo.valor_total)}</dd>
-            </dl>
+          {esDueno && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <EnlaceBoton href={enlace({ nombre: 'ajuste', id: producto.id })} variante="primario">
+                Ajustar stock
+              </EnlaceBoton>
+              {contexto.ve_costos && <EnlaceBoton href={enlace({ nombre: 'kardex', id: producto.id })}>Kardex</EnlaceBoton>}
+            </div>
           )}
-        </div>
-        {esDueno && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <EnlaceBoton href={enlace({ nombre: 'ajuste', id: producto.id })} variante="primario">
-              Ajustar stock
-            </EnlaceBoton>
-            {contexto.ve_costos && <EnlaceBoton href={enlace({ nombre: 'kardex', id: producto.id })}>Kardex</EnlaceBoton>}
-          </div>
-        )}
-        {!esDueno && contexto.ve_costos && (
-          <div className="mt-4">
-            <EnlaceBoton href={enlace({ nombre: 'kardex', id: producto.id })}>Kardex</EnlaceBoton>
-          </div>
-        )}
-      </Tarjeta>
+          {!esDueno && contexto.ve_costos && (
+            <div className="mt-4">
+              <EnlaceBoton href={enlace({ nombre: 'kardex', id: producto.id })}>Kardex</EnlaceBoton>
+            </div>
+          )}
+        </Tarjeta>
+      )}
 
       <Presentaciones producto={producto} editable={esDueno} />
 
       {esDueno ? (
         <Tarjeta className="mt-4">
           <h2 className="mb-3 font-semibold">Datos del producto</h2>
-          <FormProducto producto={producto} />
+          <FormProducto
+            // Se vuelve a montar cuando llega el costo (solo quien ve costos).
+            key={costo ? 'con-costo' : 'sin-costo'}
+            producto={producto}
+            costoServicio={costo ? costo.ultimo_costo : undefined}
+          />
         </Tarjeta>
       ) : (
         <Tarjeta className="mt-4">

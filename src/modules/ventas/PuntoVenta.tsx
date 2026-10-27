@@ -202,7 +202,9 @@ export function PuntoVenta() {
                       {o.producto.nombre}
                       {Number(o.presentacion.factor) !== 1 && ` — ${o.presentacion.nombre}`}
                       <span className="block text-sm text-gray-500">
-                        Stock {formatearCantidad(stockDe(o.producto))} {UNIDADES[o.producto.unidad_base]}
+                        {o.producto.controla_stock
+                          ? `Stock ${formatearCantidad(stockDe(o.producto))} ${UNIDADES[o.producto.unidad_base]}`
+                          : 'Sin control de stock'}
                       </span>
                     </span>
                     <span className="font-semibold tabular-nums">{formatearDinero(o.presentacion.precio_venta ?? '0')}</span>
