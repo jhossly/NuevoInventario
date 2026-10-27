@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (Fase 10: reportes y exportación listos y probados en local; falta CI)
+Última actualización: 2026-11-01 (Fase 10 cerrada: reportes y exportación probados en local y en CI)
 
 ---
 
@@ -45,7 +45,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 8. Ventas | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
-| 10. Reportes y exportación | Base de datos e interfaz probadas en local (271/271 pgTAP, navegador); **falta subir y CI** |
+| 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | Siguiente (último pendiente del MVP-1) |
 
 ## Migraciones
@@ -96,6 +96,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-31 | `npm run db:test:concurrencia` | Nuevo caso 3: dos ventas al fiado a la vez que juntas pasan el límite | **3/3 pasan**. Sin bloquear al cliente, el caso 3 falla (las dos pasan y la deuda queda en $6,90 sobre $5) |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `006_reportes` (26: margen del aceite de la Fase 3 18,16 % / 22,18 % y de la galleta de la HU-05 24 % / 31,58 %, anuladas fuera, devoluciones restadas, por medio de pago, período inválido, RIMPE configurable, exportación con base 0 % / gravada / IVA, permisos y aislamiento) | **271/271 pasan**. Mutación: contar anuladas y no restar devoluciones → fallan 6 |
 | 2026-11-01 | Vitest | `csv.test.ts` (BOM, `;`, coma decimal, comillas, fórmulas neutralizadas, rangos de mes con febrero bisiesto) | **49/49 pasan** |
+| 2026-11-01 | GitHub Actions, run 40584727008, commit `bab975e` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-01 | Navegador, 1200 px, ventas de ejemplo | Reportes del mes: ventas netas $24,17, IVA $1,68, utilidad $6,92 (28,6 %), margen por producto, RIMPE $24,17 de $20.000; los 4 CSV generados con contenido correcto | **Todo funciona** |
 | 2026-10-31 | GitHub Actions, run 40581294249, commit `26102a0` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia (3 casos) | **Pasan todos los pasos** |
 | 2026-10-31 | Navegador, 1200 px y celular | Vendedor: «Cobrar» bloqueado sin caja, abrir con $20, venta en efectivo, venta al fiado a Doña Rosa (disponible $15 → $8,10), abono de $5, cierre a ciegas contando $28. Dueño: esperado $28,45, falta $0,45, explicación guardada | **Todo funciona**; la única llamada con error es el cierre de una sesión anterior al reset de la base |
@@ -141,7 +142,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de reportes (`git push`) y confirmar el CI.
-2. Fase 11: importar XML autorizados del SRI (facturas de proveedores como compras; facturas propias para vincularlas a la venta según D-012), con detección de duplicados.
-3. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-4. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
+1. Fase 11: importar XML autorizados del SRI (facturas de proveedores como compras; facturas propias para vincularlas a la venta según D-012), con detección de duplicados.
+2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
+3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
