@@ -21,6 +21,7 @@ export function ListaVentas() {
         titulo={esDueno ? 'Ventas' : 'Mis ventas'}
         acciones={
           <>
+            {esDueno && <EnlaceBoton href={enlace({ nombre: 'comprobantes' })}>Facturas SRI</EnlaceBoton>}
             <EnlaceBoton href={enlace({ nombre: 'clientes' })}>Clientes</EnlaceBoton>
             <EnlaceBoton href={enlace({ nombre: 'vender' })} variante="primario">
               Vender

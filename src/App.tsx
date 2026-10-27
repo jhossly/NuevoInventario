@@ -6,6 +6,7 @@ import { Proveedores } from '@/modules/compras/Proveedores';
 import { Caja } from '@/modules/caja/Caja';
 import { Fiado } from '@/modules/caja/Fiado';
 import { Reportes } from '@/modules/reportes/Reportes';
+import { Comprobantes } from '@/modules/comprobantes/Comprobantes';
 import { Clientes } from '@/modules/ventas/Clientes';
 import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
 import { ListaVentas } from '@/modules/ventas/ListaVentas';
@@ -55,7 +56,7 @@ export function App() {
 
 const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDueno?: boolean }[] = [
   { titulo: 'Vender', ruta: { nombre: 'vender' }, incluye: ['vender'] },
-  { titulo: 'Ventas', ruta: { nombre: 'ventas' }, incluye: ['ventas', 'venta', 'clientes'] },
+  { titulo: 'Ventas', ruta: { nombre: 'ventas' }, incluye: ['ventas', 'venta', 'clientes', 'comprobantes'] },
   { titulo: 'Caja', ruta: { nombre: 'caja' }, incluye: ['caja'] },
   { titulo: 'Fiado', ruta: { nombre: 'fiado' }, incluye: ['fiado'] },
   {
@@ -158,6 +159,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return <Fiado />;
     case 'reportes':
       return soloDueno(<Reportes />);
+    case 'comprobantes':
+      return soloDueno(<Comprobantes />);
     case 'no-encontrada':
       return (
         <Tarjeta>
