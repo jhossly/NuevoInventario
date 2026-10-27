@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (crear producto desde una línea de factura del SRI; CI en verde)
+Última actualización: 2026-10-27 (Fase 12 en curso: guía de producción y script de alta listos)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | Siguiente |
+| 12. Contador y puesta en producción | **En curso**: guía `docs/PRODUCCION.md` y `supabase/produccion/alta_bodega.sql` listos; faltan las cuentas del dueño (Supabase, Vercel) |
 
 ## Migraciones
 
@@ -115,6 +115,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
+| 2026-10-27 | Supabase local sin seed (`db reset --no-seed`) | `alta_bodega.sql`: sin cambiar datos y sin usuarios → errores claros; usuarios creados por la API de Auth (como el panel) → bodega con Dueño y Vendedor; segunda vez → «Ya hay una bodega». Ingreso del Dueño nuevo: bodega vacía | **Funciona**. Luego `db reset` con seed |
 | 2026-10-27 | GitHub Actions, run 40598107335, commit `1982149` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia (crear producto desde la línea) | **Pasan todos los pasos** |
 | 2026-10-27 | GitHub Actions, run 40594682151, commit `e80b1d3` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `009_productos_sin_stock`) + concurrencia | **Pasan todos los pasos** |
 | 2026-10-27 | GitHub Actions, run 40592019023, commit `43a0f5f` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `008_productos_sri_iva`) + concurrencia | **Pasan todos los pasos** |
@@ -175,4 +176,4 @@ Ninguno abierto. Resueltos:
 
 1. Ojo: un producto recién creado tiene stock 0; para «crear la venta» desde la factura hace falta cargar su stock (apertura o compra) o desmarcar «Controla stock».
 2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
+3. Puesta en producción siguiendo `docs/PRODUCCION.md`: el dueño crea las cuentas de Supabase y Vercel; luego `db push`, cerrar registro, usuarios, `alta_bodega.sql`, Vercel con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, comprobar, cargar datos y 1–2 semanas en paralelo con Excel.
