@@ -28,6 +28,7 @@ describe('leerRuta', () => {
       { nombre: 'clientes' },
       { nombre: 'caja' },
       { nombre: 'fiado' },
+      { nombre: 'reportes' },
     ];
     for (const ruta of rutas) expect(leerRuta(enlace(ruta))).toEqual(ruta);
   });
@@ -35,7 +36,7 @@ describe('leerRuta', () => {
   it('no acepta ids que no son uuid ni rutas desconocidas', () => {
     expect(leerRuta('#/productos/123')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta(`#/productos/${ID}/borrar`)).toEqual({ nombre: 'no-encontrada' });
-    expect(leerRuta('#/reportes')).toEqual({ nombre: 'no-encontrada' });
+    expect(leerRuta('#/facturacion')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta('#/ventas/123')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta('#/compras/abc')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta(`#/compras/${ID}/editar`)).toEqual({ nombre: 'no-encontrada' });

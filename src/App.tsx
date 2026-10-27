@@ -5,6 +5,7 @@ import { NuevaCompra } from '@/modules/compras/NuevaCompra';
 import { Proveedores } from '@/modules/compras/Proveedores';
 import { Caja } from '@/modules/caja/Caja';
 import { Fiado } from '@/modules/caja/Fiado';
+import { Reportes } from '@/modules/reportes/Reportes';
 import { Clientes } from '@/modules/ventas/Clientes';
 import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
 import { ListaVentas } from '@/modules/ventas/ListaVentas';
@@ -68,6 +69,7 @@ const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDu
     incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'],
     soloDueno: true,
   },
+  { titulo: 'Reportes', ruta: { nombre: 'reportes' }, incluye: ['reportes'], soloDueno: true },
 ];
 
 function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
@@ -154,6 +156,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return <Caja />;
     case 'fiado':
       return <Fiado />;
+    case 'reportes':
+      return soloDueno(<Reportes />);
     case 'no-encontrada':
       return (
         <Tarjeta>

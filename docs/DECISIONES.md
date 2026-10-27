@@ -41,6 +41,9 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-034 | 2026-10-31 | Fiado: el Vendedor solo fía a clientes autorizados y dentro del límite; el Dueño puede fiar a cualquier cliente. Se bloquea la fila del cliente para que ventas simultáneas no pasen el límite | Fase 4 (Dueño «Sí», Vendedor «solo autorizados y dentro del límite») | Vigente |
 | D-035 | 2026-10-31 | Anular una venta al fiado o devolver como ABONO_FIADO descuenta la deuda con un AJUSTE (no un ABONO, que es dinero recibido). El abono no supera lo que se debe; la devolución como abono tampoco | Fase 3: la cuenta se corrige con AJUSTE | Vigente |
 | D-036 | 2026-10-31 | Ventas por transferencia o tarjeta no exigen caja abierta; solo el efectivo | HU-04 habla de ventas en efectivo | Vigente (confirmar con el dueño) |
+| D-037 | 2026-11-01 | Reportes con ventas netas: ventas confirmadas del período menos sus devoluciones (restadas en el período de la venta); las anuladas no cuentan. Margen = utilidad ÷ venta sin IVA; recargo = utilidad ÷ costo; ambos calculados y redondeados en SQL y rotulados por separado | HU-05; un producto no queda con margen negativo por una devolución de otro mes | Vigente |
+| D-038 | 2026-11-01 | Exportación para el contador en CSV para Excel en español (`;`, coma decimal, UTF-8 con BOM, CRLF), un archivo por tipo: ventas, compras, devoluciones y resumen de IVA (base 0 %, base gravada, IVA); los anulados se listan marcados y no suman. Los textos que parecen fórmulas se neutralizan | Formato a confirmar con el contador; evita inyección de fórmulas | Vigente (confirmar con contador) |
+| D-039 | 2026-11-01 | Límite anual de RIMPE Negocio Popular configurable en `empresas.limite_ingresos_rimpe` ($20.000 por defecto); los ingresos son las ventas netas sin IVA del año calendario; aviso al 80 % | El monto puede cambiar por norma | Vigente (confirmar con contador) |
 
 ## Dependencias y por qué
 
