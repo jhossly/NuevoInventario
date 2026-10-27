@@ -18,6 +18,10 @@ describe('leerRuta', () => {
       { nombre: 'ajuste', id: ID },
       { nombre: 'kardex', id: ID },
       { nombre: 'conteo' },
+      { nombre: 'compras' },
+      { nombre: 'compra-nueva' },
+      { nombre: 'compra', id: ID },
+      { nombre: 'proveedores' },
     ];
     for (const ruta of rutas) expect(leerRuta(enlace(ruta))).toEqual(ruta);
   });
@@ -26,6 +30,8 @@ describe('leerRuta', () => {
     expect(leerRuta('#/productos/123')).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta(`#/productos/${ID}/borrar`)).toEqual({ nombre: 'no-encontrada' });
     expect(leerRuta('#/ventas')).toEqual({ nombre: 'no-encontrada' });
+    expect(leerRuta('#/compras/abc')).toEqual({ nombre: 'no-encontrada' });
+    expect(leerRuta(`#/compras/${ID}/editar`)).toEqual({ nombre: 'no-encontrada' });
   });
 });
 

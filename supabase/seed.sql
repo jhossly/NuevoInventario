@@ -100,6 +100,12 @@ begin
     end if;
   end loop;
 
+  v_r := public.guardar_proveedor(null,
+    '{"tipo_identificacion":"RUC","identificacion":"1790000000001","nombre":"Distribuidora de Prueba","telefono":"0999999999"}');
+  if not (v_r ->> 'ok')::boolean then
+    raise exception 'seed: proveedor -> %', v_r;
+  end if;
+
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

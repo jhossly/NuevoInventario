@@ -11,6 +11,10 @@ export type Ruta =
   | { nombre: 'ajuste'; id: string }
   | { nombre: 'kardex'; id: string }
   | { nombre: 'conteo' }
+  | { nombre: 'compras' }
+  | { nombre: 'compra-nueva' }
+  | { nombre: 'compra'; id: string }
+  | { nombre: 'proveedores' }
   | { nombre: 'no-encontrada' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +26,13 @@ export function leerRuta(hash: string): Ruta {
   if (resto.length > 0) return { nombre: 'no-encontrada' };
   if (primera === undefined) return { nombre: 'productos' };
   if (primera === 'conteo' && segunda === undefined) return { nombre: 'conteo' };
+  if (primera === 'proveedores' && segunda === undefined) return { nombre: 'proveedores' };
+  if (primera === 'compras') {
+    if (tercera !== undefined) return { nombre: 'no-encontrada' };
+    if (segunda === undefined) return { nombre: 'compras' };
+    if (segunda === 'nueva') return { nombre: 'compra-nueva' };
+    return UUID.test(segunda) ? { nombre: 'compra', id: segunda } : { nombre: 'no-encontrada' };
+  }
   if (primera !== 'productos') return { nombre: 'no-encontrada' };
   if (segunda === undefined) return { nombre: 'productos' };
   if (segunda === 'nuevo' && tercera === undefined) return { nombre: 'producto-nuevo' };
@@ -47,6 +58,14 @@ export function enlace(ruta: Ruta): string {
       return `#/productos/${ruta.id}/kardex`;
     case 'conteo':
       return '#/conteo';
+    case 'compras':
+      return '#/compras';
+    case 'compra-nueva':
+      return '#/compras/nueva';
+    case 'compra':
+      return `#/compras/${ruta.id}`;
+    case 'proveedores':
+      return '#/proveedores';
   }
 }
 

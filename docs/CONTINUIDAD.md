@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-28 (Fase 6 cerrada: base de datos e interfaz de catálogo e inventario, probadas en local y en CI)
+Última actualización: 2026-10-29 (Fase 7: compras listas y probadas en local; falta CI)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-022). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-025). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -42,7 +42,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
-| 7. Compras | Siguiente (base de datos) |
+| 7. Compras | Base de datos e interfaz probadas en local (132/132 pgTAP, navegador); **falta subir y CI** |
+| 8. Ventas | Siguiente |
 
 ## Migraciones
 
@@ -50,6 +51,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | --- | --- |
 | `20261027000000_base_seguridad.sql` | Esquema `privado`, `empresas`, `perfiles`, `membresias`, `auditoria`, `mi_empresa()`, `mi_rol()`, `privado.ok()`/`privado.error()`, trigger de solo inserción, permisos y RLS, función `mi_contexto()` |
 | `20261028000000_catalogo_inventario.sql` | `categorias`, `productos`, `presentaciones`, `movimientos_inventario` (inmutable, con `secuencia`), `existencias` (costos ocultos por columna, D-020), `conteos`, `conteo_detalles` (congelados al confirmar). Motor `privado.registrar_movimiento` (promedio ponderado, bloqueo de fila, `STOCK_INSUFICIENTE`). `privado.fallar()` (errores de negocio con SQLSTATE `NG001`) y `privado.ve_costos()`. Expuestas: `guardar_categoria`, `eliminar_categoria`, `guardar_producto`, `guardar_presentacion`, `ajustar_inventario`, `inventario_valorizado`, `guardar_conteo`, `confirmar_conteo` |
+| `20261029000000_compras.sql` | `proveedores`, `compras` (solo pasa de CONFIRMADA a ANULADA), `compra_detalles` (inmutables). Tipo de movimiento `ANULACION_COMPRA`; `registrar_movimiento` recibe la fecha del documento. `privado.calcular_lineas_compra` (única fuente del cálculo), `privado.normalizar_documento`. Expuestas: `guardar_proveedor`, `calcular_compra` (vista previa), `registrar_compra`, `anular_compra` |
+
+Interfaz (Fase 7): menú Productos / Compras para el Dueño; lista de compras, nueva compra (con o sin respaldo, alta rápida de proveedor, líneas por presentación con costo sin IVA y descuento, vista previa calculada por la base, clave de idempotencia por compra), detalle con anulación, proveedores.
 
 Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/shared/ruta.ts`); toda lectura pasa por `consultar()` y toda escritura por `llamar()` (`src/lib/datos.ts`), con Zod sobre cada respuesta. Pantallas: lista de productos con búsqueda sin tildes y bajo stock, ficha con presentaciones, alta y edición de producto, ajuste (apertura, ajuste ±, merma) con clave de idempotencia por intento, kardex (solo quien ve costos) y conteo con borrador. Los números escritos se leen con `leerDecimal` (acepta coma, no redondea).
 
@@ -70,6 +74,8 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-28 | Windows 11 del usuario: Vitest | 6 archivos: `formato`, `respuesta`, `env`, `rpc`, `decimal`, `ruta` (incluye `nuevaClave`) | **40/40 pasan**; typecheck y build pasan (aviso: JS > 500 kB) |
 | 2026-10-28 | Navegador integrado, app local en celular (375×812), datos del seed | Dueño: ingreso, lista con valorizado, merma (stock 10 → 9), merma mayor al stock (`No hay stock suficiente`), kardex, conteo con borrador que sobrevive a recargar y confirmación (queso 8,5 → 8,2; fósforos sin cambio), alta de producto con error de 3 decimales en el precio, presentación «Paquete 4», apertura. Vendedor: lista sin costos, ficha sin edición, ajuste bloqueado | **Todo funciona**; sin errores en consola |
 | 2026-10-28 | GitHub Actions, run 40550743078, commit `c644f24` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la interfaz de la Fase 6 | **Pasan los dos** |
+| 2026-10-29 | Windows 11 del usuario: Supabase local | `003_compras` (46: Fase 3 y HU-01, descuento antes del IVA, IVA como costo o no, libra → kg, respaldo, documento repetido y normalizado, idempotencia, fecha futura, todo o nada, anulación al promedio y su límite, inmutabilidad, permisos) | **132/132 pasan** (24 + 62 + 46). Mutación: IVA sin restar el descuento y compra anulada que vuelve a confirmarse → fallan C3 e I4 |
+| 2026-10-29 | Navegador integrado, celular, datos del seed | Dueño: compra de 2 cajas de aceite con factura `1-1-456` (vista previa $55,20 + $8,28 = $63,48; 24 u a $2,645; stock 34 a $2,455294), anulación con motivo, lista con «anulada». Vendedor: Compras bloqueado y sin menú | **Todo funciona**; las llamadas de la app responden 200 |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
@@ -105,4 +111,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.
+1. Subir los commits de compras (`git push`) y confirmar el CI.
+2. Fase 8: ventas de mostrador (`clientes`, `ventas`, `venta_detalles`, `registrar_venta` con precios con IVA incluido, bloqueo sin stock, costo de venta copiado), anulaciones y devoluciones; prueba de dos ventas simultáneas de la última unidad con dos conexiones.
+3. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.

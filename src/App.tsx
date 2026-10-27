@@ -1,4 +1,8 @@
 import { FichaProducto } from '@/modules/catalogo/FichaProducto';
+import { DetalleCompra } from '@/modules/compras/DetalleCompra';
+import { ListaCompras } from '@/modules/compras/ListaCompras';
+import { NuevaCompra } from '@/modules/compras/NuevaCompra';
+import { Proveedores } from '@/modules/compras/Proveedores';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
@@ -42,8 +46,18 @@ export function App() {
   }
 }
 
+const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][] }[] = [
+  {
+    titulo: 'Productos',
+    ruta: { nombre: 'productos' },
+    incluye: ['productos', 'producto-nuevo', 'producto', 'ajuste', 'kardex', 'conteo'],
+  },
+  { titulo: 'Compras', ruta: { nombre: 'compras' }, incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'] },
+];
+
 function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
   const ruta = useRuta();
+  const esDueno = contexto.rol === 'DUENO';
   return (
     <div className="min-h-dvh">
       <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
@@ -51,7 +65,18 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
           <a href={enlace({ nombre: 'productos' })} className="flex-1 truncate font-semibold">
             {contexto.nombre}
           </a>
-          <span className="hidden text-sm text-gray-500 sm:inline">
+          {esDueno &&
+            SECCIONES.map((s) => (
+              <a
+                key={s.titulo}
+                href={enlace(s.ruta)}
+                aria-current={s.incluye.includes(ruta.nombre) ? 'page' : undefined}
+                className="rounded-lg px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900"
+              >
+                {s.titulo}
+              </a>
+            ))}
+          <span className="hidden text-sm text-gray-500 md:inline">
             {correo} · {contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}
           </span>
           <Boton variante="secundario" onClick={() => void cerrarSesion()}>
@@ -60,7 +85,7 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
         </div>
       </nav>
       <main className="mx-auto max-w-3xl p-4">
-        <Pantalla ruta={ruta} esDueno={contexto.rol === 'DUENO'} />
+        <Pantalla ruta={ruta} esDueno={esDueno} />
       </main>
     </div>
   );
@@ -92,6 +117,14 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return <Kardex id={ruta.id} />;
     case 'conteo':
       return soloDueno(<Conteo />);
+    case 'compras':
+      return soloDueno(<ListaCompras />);
+    case 'compra-nueva':
+      return soloDueno(<NuevaCompra />);
+    case 'compra':
+      return soloDueno(<DetalleCompra id={ruta.id} />);
+    case 'proveedores':
+      return soloDueno(<Proveedores />);
     case 'no-encontrada':
       return (
         <Tarjeta>

@@ -27,6 +27,9 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-020 | 2026-10-28 | Costos de `existencias` ocultos por permiso de columna; el valor se lee con `inventario_valorizado()` y el kardex con RLS según `ve_costos()`. Reemplaza la "vista separada solo para Dueño" de la Fase 4 | Dueño y Vendedor usan el mismo rol de base: una vista `security_invoker` (D-014) no puede separarlos | Vigente |
 | D-021 | 2026-10-28 | Ajustes con signo (APERTURA > 0 con costo y solo sin movimientos previos; AJUSTE ≠ 0 y MERMA < 0, ambos con motivo). La clave de idempotencia de los ajustes vive en `movimientos_inventario` | Trazabilidad; los ajustes no tienen documento propio | Vigente |
 | D-022 | 2026-10-28 | Conteo en dos pasos: `guardar_conteo` (borrador editable) y `confirmar_conteo` (recalcula el stock del sistema al confirmar, todo o nada, y congela el conteo) | El dueño cuenta con calma; el stock puede moverse mientras tanto | Vigente |
+| D-023 | 2026-10-29 | Anular una compra saca sus unidades al costo promedio vigente (movimiento ANULACION_COMPRA); si ya se vendió parte, no se anula y se corrige con un ajuste | Mismo motor para toda salida; el valor del inventario nunca queda negativo | Vigente (confirmar con contador) |
+| D-024 | 2026-10-29 | Los cálculos de una compra viven solo en `privado.calcular_lineas_compra`; la vista previa de la interfaz usa `calcular_compra`, que no guarda | D-011 sin duplicar redondeos en TypeScript | Vigente |
+| D-025 | 2026-10-29 | Compra en un solo paso (se registra ya confirmada, sin borrador); el número de documento del SRI se normaliza (`1-1-123` → `001-001-000000123`) y no se repite por proveedor salvo que la anterior esté anulada | El dueño registra la factura que tiene en la mano; evita duplicados por formato | Vigente |
 
 ## Dependencias y por qué
 
