@@ -101,6 +101,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `006_reportes` (26: margen del aceite de la Fase 3 18,16 % / 22,18 % y de la galleta de la HU-05 24 % / 31,58 %, anuladas fuera, devoluciones restadas, por medio de pago, período inválido, RIMPE configurable, exportación con base 0 % / gravada / IVA, permisos y aislamiento) | **271/271 pasan**. Mutación: contar anuladas y no restar devoluciones → fallan 6 |
 | 2026-11-01 | Vitest | `csv.test.ts` (BOM, `;`, coma decimal, comillas, fórmulas neutralizadas, rangos de mes con febrero bisiesto) | **49/49 pasan** |
 | 2026-11-02 | Windows 11 del usuario: Supabase local | `007_comprobantes_sri` (39: sobre con CDATA y factura sola, repetida, otro RUC, ambiente de pruebas, dígito verificador, no autorizada, DOCTYPE, no XML, centavo de IVA, asociación y memoria, crear venta con montos/stock/cliente/pagos, vincular D-012 sin duplicar, descartar, inmutabilidad, permisos) | **310/310 pasan**. Mutación: sin dígito verificador y vincular sin fecha/total → fallan I7 y V6 |
+| 2026-11-02 | Supabase local, transacción revertida, con 2 XML reales del dueño (no se guardan en el repositorio) | Factura emitida 001-100-000001529 (firmada, sin sobre de autorización, 17 líneas, IVA 0 %) y factura de un proveedor (con sobre y CDATA) | **Emitida: se importa, no se duplica y crea la venta** ($48,60, 17 líneas, 51 u, efectivo, sin caja, 17 códigos recordados). **Proveedor: rechazada por otro RUC**, como corresponde |
 | 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
 | 2026-11-01 | GitHub Actions, run 40584727008, commit `bab975e` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
@@ -133,7 +134,12 @@ Ninguno abierto. Resueltos:
 
 ## Riesgos pendientes
 
-- **Los XML de prueba son generados por nosotros** con la estructura pública del SRI. Antes de usarlo en serio hay que importar uno o dos XML reales descargados del portal del SRI por el dueño y revisar que se lean igual (nombres de etiquetas, sobre de autorización, formas de pago).
+- **Hallazgos con XML reales (2026-11-02), a decidir con el dueño y el contador:**
+  - **IVA de las ventas.** La factura real del dueño cobra IVA 0 % en todo (incluida la Coca-Cola), como corresponde a RIMPE Negocio Popular, pero el catálogo tiene productos con 15 %. Si el negocio no cobra IVA en sus ventas, hace falta una configuración de la empresa para vender siempre con 0 % (las compras sí traen IVA). **Confirmar con el contador antes de usar el sistema.**
+  - **Recargas telefónicas.** La factura incluye «RECARGA CLARO GIGAS»: es un servicio, no algo con stock. Hoy todo producto controla stock y la venta se bloquearía. Hace falta un tipo de producto sin control de stock (servicio).
+  - **Códigos internos.** El portal del SRI usa códigos propios del dueño (0065, REC128…), no códigos de barras: la primera vez hay que asociar cada línea a mano (17 en esta factura); después se recuerdan. Conviene una forma más rápida de asociar (o crear el producto desde la línea).
+  - La factura emitida llega **firmada pero sin el sobre de autorización**; se acepta (el importador lee ambos formatos).
+  - Si más adelante se importan facturas de **proveedores como compras**: traen ICE (código 3) e IRBPNR por botellas (código 5) que suman al total, el código de barras viene en `codigoAuxiliar` y hay líneas de bonificación a precio 0.
 - Una venta con factura que se anula en el sistema no anula la factura en el SRI: eso se hace en el portal (hasta el día 7 del mes siguiente).
 - Respuestas del contador: IVA incluido en precios, IVA de compras como costo, notas de venta agrupadas y formato de exportación.
 - Confirmar que un sistema de uso propio no requiere el registro de proveedores (Res. NAC-DGERCGC26-00000027).
@@ -151,6 +157,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Probar la importación con XML reales del portal del SRI (ver Riesgos).
+1. Decidir con el dueño y el contador los hallazgos de los XML reales (ver Riesgos): IVA 0 % en ventas, productos sin stock (recargas), asociación rápida de códigos.
 2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
 3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
