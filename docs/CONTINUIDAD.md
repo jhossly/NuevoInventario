@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (Fase 5 verificada en Windows; falta primer commit y CI)
+Última actualización: 2026-10-27 (Fase 5 cerrada: verificada en Windows y en CI)
 
 ---
 
@@ -40,7 +40,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 2. Arquitectura | Aprobada |
 | 3. Modelo de datos | Aprobada |
 | 4. Seguridad | Aprobada |
-| 5. Entorno y estructura | Verificada en Windows (Node, Vitest, build, Supabase local, pgTAP); **falta primer commit y CI** |
+| 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
 | 6. Productos e inventario | Siguiente |
 
 ## Migraciones
@@ -58,6 +58,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 2026-10-27 | Windows 11 del usuario: Node 24.22.0, npm 11.19.1 | `npm install` (184 paquetes), `npm run typecheck`, `npm run build` (vite 5.4.21, JS 463 kB / 128 kB gzip) | **Pasan** |
 | 2026-10-27 | Windows 11 del usuario: vitest 2.1.9 real | `formato.test.ts`, `respuesta.test.ts`, `env.test.ts` (nuevo, cubre `leerEnv`) | **17/17 pasan** |
 | 2026-10-27 | Windows 11 del usuario: Supabase local real (CLI 2.122.0, imagen postgres 17.11.0.006, pg_prove 3.36) | `npm run db:test` → `001_seguridad_base.test.sql` | **24/24 pasan** |
+| 2026-10-27 | GitHub Actions, run 40543041246, commit `0a00ce6` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» (`.github/workflows/pruebas.yml`) | **Pasan los dos** |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
 
@@ -72,7 +73,8 @@ Ninguno abierto. Resueltos:
 ## Hecho en Windows (2026-10-27)
 
 - Git 2.56.0 y Docker Desktop 29.9.2 instalados.
-- `git init -b main` hecho; **sin commit todavía**.
+- Repositorio: https://github.com/jhossly/NuevoInventario (rama `main`). Primer commit `0a00ce6`, autor `jhossly <joselynmusuna4.2017@gmail.com>` (config local del repo). El push pide iniciar sesión en el navegador (Git Credential Manager); no hay `gh` instalado.
+- `.github/workflows/pruebas.yml` creado en esta sesión (no existía aunque el README lo mencionaba).
 - `npx supabase init` hecho: `supabase/config.toml` (project_id `NuevoInventario`, PostgreSQL 17, API en 54321, BD en 54322).
 - `npx supabase start` funciona; la migración `base_seguridad` se aplica en PostgreSQL 17. Studio en http://127.0.0.1:54323.
 - `.env.local` creado con la URL y la anon key locales (ignorado por Git).
@@ -86,5 +88,4 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Primer commit, crear el repositorio en GitHub, subir y confirmar que el flujo de CI pasa.
-2. Fase 6: migración de catálogo e inventario (`categorias`, `productos`, `presentaciones`, `movimientos_inventario`, `existencias`, conteos), funciones `ajustar_inventario` y `registrar_conteo`, pruebas del kardex del aceite (Fase 3) y datos de prueba (`seed.sql`).
+1. Fase 6: migración de catálogo e inventario (`categorias`, `productos`, `presentaciones`, `movimientos_inventario`, `existencias`, conteos), funciones `ajustar_inventario` y `registrar_conteo`, pruebas del kardex del aceite (Fase 3) y datos de prueba (`seed.sql`).
