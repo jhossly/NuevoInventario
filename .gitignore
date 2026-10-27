@@ -1,0 +1,30 @@
+# Dependencias y compilación
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Respaldos de base de datos (nunca al repositorio)
+*.dump
+respaldos/
+
+# Editor y sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log

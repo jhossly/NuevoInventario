@@ -1,0 +1,40 @@
+# Pruebas automáticas en cada push y pull request.
+# Regla 4 del proyecto: nada es "terminado" hasta que sus pruebas pasan.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  interfaz:
+    name: Tipos, Vitest y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  base-de-datos:
+    name: Migraciones y pgTAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Solo la base: aplica todas las migraciones desde cero.
+      - run: npx supabase db start
+      - run: npx supabase test db
