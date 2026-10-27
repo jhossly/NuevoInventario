@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (Fase 5 cerrada: verificada en Windows y en CI)
+Última actualización: 2026-10-28 (Fase 6: base de datos de catálogo e inventario lista y probada en local)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-019). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-022). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -41,13 +41,17 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 3. Modelo de datos | Aprobada |
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
-| 6. Productos e inventario | Siguiente |
+| 6. Productos e inventario | Base de datos lista y probada en local (86/86 pgTAP); **falta CI y pantallas** |
+| 7. Compras | Siguiente (base de datos) |
 
 ## Migraciones
 
 | Archivo | Contenido |
 | --- | --- |
 | `20261027000000_base_seguridad.sql` | Esquema `privado`, `empresas`, `perfiles`, `membresias`, `auditoria`, `mi_empresa()`, `mi_rol()`, `privado.ok()`/`privado.error()`, trigger de solo inserción, permisos y RLS, función `mi_contexto()` |
+| `20261028000000_catalogo_inventario.sql` | `categorias`, `productos`, `presentaciones`, `movimientos_inventario` (inmutable, con `secuencia`), `existencias` (costos ocultos por columna, D-020), `conteos`, `conteo_detalles` (congelados al confirmar). Motor `privado.registrar_movimiento` (promedio ponderado, bloqueo de fila, `STOCK_INSUFICIENTE`). `privado.fallar()` (errores de negocio con SQLSTATE `NG001`) y `privado.ve_costos()`. Expuestas: `guardar_categoria`, `eliminar_categoria`, `guardar_producto`, `guardar_presentacion`, `ajustar_inventario`, `inventario_valorizado`, `guardar_conteo`, `confirmar_conteo` |
+
+`supabase/seed.sql` (solo local): empresa «Bodega de Prueba», usuarios `dueno@bodega.test` y `vendedor@bodega.test` (contraseña en el propio archivo), 4 categorías, 6 productos con 2 presentaciones cada uno y stock inicial cargado con las funciones públicas. Para la Fase 7, el motor ya acepta COMPRA, VENTA, DEVOLUCION_VENTA y ANULACION_VENTA: compras y ventas solo deben llamarlo.
 
 ## Pruebas ejecutadas y resultados reales
 
@@ -59,6 +63,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 2026-10-27 | Windows 11 del usuario: vitest 2.1.9 real | `formato.test.ts`, `respuesta.test.ts`, `env.test.ts` (nuevo, cubre `leerEnv`) | **17/17 pasan** |
 | 2026-10-27 | Windows 11 del usuario: Supabase local real (CLI 2.122.0, imagen postgres 17.11.0.006, pg_prove 3.36) | `npm run db:test` → `001_seguridad_base.test.sql` | **24/24 pasan** |
 | 2026-10-27 | GitHub Actions, run 40543041246, commit `0a00ce6` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» (`.github/workflows/pruebas.yml`) | **Pasan los dos** |
+| 2026-10-28 | Windows 11 del usuario: Supabase local, después de `db reset` con seed | `001_seguridad_base` (24) + `002_catalogo_inventario` (62: kardex del aceite fila por fila, reglas, idempotencia, redondeo, Vendedor sin costos, aislamiento, libro inmutable) | **86/86 pasan**. Prueba de mutación: con la salida al último costo y `existencias` sin permiso por columna, fallan 7/62 como se espera |
+| 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
 
@@ -85,7 +91,12 @@ Ninguno abierto. Resueltos:
 - Confirmar que un sistema de uso propio no requiere el registro de proveedores (Res. NAC-DGERCGC26-00000027).
 - Compatibilidad de la firma XAdES con Edge Functions (prototipo antes del MVP-2).
 - Plan de Supabase para producción (el gratuito no tiene respaldos automáticos).
+- La concurrencia (dos ventas de la última unidad a la vez) depende de `select … for update` en `existencias`; pgTAP corre en una sola sesión y no la prueba. Probarla con dos conexiones en la Fase 7, cuando exista `registrar_venta`.
+- `existencias_cantidad_no_negativa` impide stock negativo; si el dueño activa `permitir_venta_sin_stock` (D-004), habrá que quitar esa restricción en una migración.
+- La interfaz debe pedir columnas explícitas de `existencias`: `select *` falla por el permiso por columna (D-020).
 
 ## Próximas tareas
 
-1. Fase 6: migración de catálogo e inventario (`categorias`, `productos`, `presentaciones`, `movimientos_inventario`, `existencias`, conteos), funciones `ajustar_inventario` y `registrar_conteo`, pruebas del kardex del aceite (Fase 3) y datos de prueba (`seed.sql`).
+1. Subir los commits de la Fase 6 (`git push`) y confirmar que el CI pasa con la migración nueva.
+2. Fase 6, interfaz: módulos `src/modules/catalogo` e `inventario` (esquemas Zod de las respuestas, lista de productos con stock, alta y edición de productos y presentaciones, ajustes y conteo desde el celular).
+3. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.

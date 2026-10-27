@@ -24,6 +24,9 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-017 | 2026-10-27 | Sin registro público: el dueño invita usuarios | Nadie ajeno crea cuenta | Vigente |
 | D-018 | 2026-10-27 | Sin ESLint por ahora; TypeScript estricto + pruebas | Menos dependencias al inicio; se reevalúa en la Fase 8 | Vigente |
 | D-019 | 2026-10-27 | Valores `numeric` llegan a la interfaz como texto | `number` de JavaScript pierde precisión | Vigente |
+| D-020 | 2026-10-28 | Costos de `existencias` ocultos por permiso de columna; el valor se lee con `inventario_valorizado()` y el kardex con RLS según `ve_costos()`. Reemplaza la "vista separada solo para Dueño" de la Fase 4 | Dueño y Vendedor usan el mismo rol de base: una vista `security_invoker` (D-014) no puede separarlos | Vigente |
+| D-021 | 2026-10-28 | Ajustes con signo (APERTURA > 0 con costo y solo sin movimientos previos; AJUSTE ≠ 0 y MERMA < 0, ambos con motivo). La clave de idempotencia de los ajustes vive en `movimientos_inventario` | Trazabilidad; los ajustes no tienen documento propio | Vigente |
+| D-022 | 2026-10-28 | Conteo en dos pasos: `guardar_conteo` (borrador editable) y `confirmar_conteo` (recalcula el stock del sistema al confirmar, todo o nada, y congela el conteo) | El dueño cuenta con calma; el stock puede moverse mientras tanto | Vigente |
 
 ## Dependencias y por qué
 
