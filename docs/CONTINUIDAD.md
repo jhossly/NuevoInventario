@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-02 (Fase 11: importación de facturas del SRI lista y probada en local; con ella el MVP-1 queda completo, falta CI)
+Última actualización: 2026-11-02 (Fase 11 cerrada: MVP-1 completo, probado en local y en CI)
 
 ---
 
@@ -46,7 +46,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 8. Ventas | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
-| 11. Importar XML del SRI | Base de datos e interfaz probadas en local (310/310 pgTAP, navegador); **falta subir y CI**. Con ella, **el MVP-1 está completo** |
+| 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
 | 12. Contador y puesta en producción | Siguiente |
 
 ## Migraciones
@@ -101,6 +101,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `006_reportes` (26: margen del aceite de la Fase 3 18,16 % / 22,18 % y de la galleta de la HU-05 24 % / 31,58 %, anuladas fuera, devoluciones restadas, por medio de pago, período inválido, RIMPE configurable, exportación con base 0 % / gravada / IVA, permisos y aislamiento) | **271/271 pasan**. Mutación: contar anuladas y no restar devoluciones → fallan 6 |
 | 2026-11-01 | Vitest | `csv.test.ts` (BOM, `;`, coma decimal, comillas, fórmulas neutralizadas, rangos de mes con febrero bisiesto) | **49/49 pasan** |
 | 2026-11-02 | Windows 11 del usuario: Supabase local | `007_comprobantes_sri` (39: sobre con CDATA y factura sola, repetida, otro RUC, ambiente de pruebas, dígito verificador, no autorizada, DOCTYPE, no XML, centavo de IVA, asociación y memoria, crear venta con montos/stock/cliente/pagos, vincular D-012 sin duplicar, descartar, inmutabilidad, permisos) | **310/310 pasan**. Mutación: sin dígito verificador y vincular sin fecha/total → fallan I7 y V6 |
+| 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
 | 2026-11-01 | GitHub Actions, run 40584727008, commit `bab975e` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-01 | Navegador, 1200 px, ventas de ejemplo | Reportes del mes: ventas netas $24,17, IVA $1,68, utilidad $6,92 (28,6 %), margen por producto, RIMPE $24,17 de $20.000; los 4 CSV generados con contenido correcto | **Todo funciona** |
@@ -150,7 +151,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de la Fase 11 (`git push`) y confirmar el CI.
-2. Probar la importación con XML reales del portal del SRI (ver Riesgos).
-3. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-4. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
+1. Probar la importación con XML reales del portal del SRI (ver Riesgos).
+2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
+3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
