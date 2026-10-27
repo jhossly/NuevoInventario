@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (productos sin control de stock: recargas y servicios; sin push)
+Última actualización: 2026-10-27 (productos sin control de stock: recargas y servicios; CI en verde)
 
 ---
 
@@ -112,6 +112,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: «IVA de ventas» → desde hoy IVA 0 % (vigente, historial); «Vender» muestra el aviso y el aceite de $3,45 sale con IVA $0,00; alta de «Recarga Claro $1» con No objeto, código REC128 e información adicional; «rec128» la encuentra en «Vender». Typecheck y Vitest (49) pasan | **Todo funciona**. La base local quedó con IVA 0 % desde hoy |
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
+| 2026-10-27 | GitHub Actions, run 40594682151, commit `e80b1d3` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `009_productos_sin_stock`) + concurrencia | **Pasan todos los pasos** |
 | 2026-10-27 | GitHub Actions, run 40592019023, commit `43a0f5f` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `008_productos_sri_iva`) + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
@@ -168,6 +169,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Push y CI de los productos sin stock (local adelante de `origin` por 2 commits). Pendiente de los XML reales: crear el producto desde una línea de factura.
+1. Pendiente de los XML reales: crear el producto desde una línea de factura.
 2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
 3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
