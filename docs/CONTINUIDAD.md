@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-28 (Fase 6: base de datos de catálogo e inventario lista y probada en local)
+Última actualización: 2026-10-28 (Fase 6: base de datos de catálogo e inventario lista, probada en local y en CI)
 
 ---
 
@@ -41,7 +41,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 3. Modelo de datos | Aprobada |
 | 4. Seguridad | Aprobada |
 | 5. Entorno y estructura | **Cerrada**: verificada en Windows y en GitHub Actions |
-| 6. Productos e inventario | Base de datos lista y probada en local (86/86 pgTAP); **falta CI y pantallas** |
+| 6. Productos e inventario | Base de datos lista (86/86 pgTAP en local, CI en verde); **faltan las pantallas** |
 | 7. Compras | Siguiente (base de datos) |
 
 ## Migraciones
@@ -64,6 +64,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 2026-10-27 | Windows 11 del usuario: Supabase local real (CLI 2.122.0, imagen postgres 17.11.0.006, pg_prove 3.36) | `npm run db:test` → `001_seguridad_base.test.sql` | **24/24 pasan** |
 | 2026-10-27 | GitHub Actions, run 40543041246, commit `0a00ce6` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» (`.github/workflows/pruebas.yml`) | **Pasan los dos** |
 | 2026-10-28 | Windows 11 del usuario: Supabase local, después de `db reset` con seed | `001_seguridad_base` (24) + `002_catalogo_inventario` (62: kardex del aceite fila por fila, reglas, idempotencia, redondeo, Vendedor sin costos, aislamiento, libro inmutable) | **86/86 pasan**. Prueba de mutación: con la salida al último costo y `existencias` sin permiso por columna, fallan 7/62 como se espera |
+| 2026-10-28 | GitHub Actions, run 40547661672, commit `e3bfa8d` | Trabajos «Tipos, Vitest y build» y «Migraciones y pgTAP» con la migración `catalogo_inventario` | **Pasan los dos** |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
 
 Aviso de `npm install`: el script `postinstall` de esbuild 0.21.5 no se ejecutó (allowScripts de npm 11). No afectó a vite ni vitest.
@@ -97,6 +98,5 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de la Fase 6 (`git push`) y confirmar que el CI pasa con la migración nueva.
-2. Fase 6, interfaz: módulos `src/modules/catalogo` e `inventario` (esquemas Zod de las respuestas, lista de productos con stock, alta y edición de productos y presentaciones, ajustes y conteo desde el celular).
-3. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.
+1. Fase 6, interfaz: módulos `src/modules/catalogo` e `inventario` (esquemas Zod de las respuestas, lista de productos con stock, alta y edición de productos y presentaciones, ajustes y conteo desde el celular).
+2. Fase 7: compras (`proveedores`, `compras`, `compra_detalles`, `registrar_compra` con IVA como costo según `iva_compras_es_costo`), usando `privado.registrar_movimiento`.
