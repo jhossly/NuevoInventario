@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (productos con datos del SRI e IVA de ventas por fecha; sin push)
+Última actualización: 2026-10-27 (productos con datos del SRI e IVA de ventas por fecha; CI en verde)
 
 ---
 
@@ -107,6 +107,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-11-02 | Supabase local, transacción revertida, con 2 XML reales del dueño (no se guardan en el repositorio) | Factura emitida 001-100-000001529 (firmada, sin sobre de autorización, 17 líneas, IVA 0 %) y factura de un proveedor (con sobre y CDATA) | **Emitida: se importa, no se duplica y crea la venta** ($48,60, 17 líneas, 51 u, efectivo, sin caja, 17 códigos recordados). **Proveedor: rechazada por otro RUC**, como corresponde |
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `008_productos_sri_iva` (34: las 5 tarifas y su código, códigos SRI únicos y de 25 caracteres, IVA 0 % por fecha en venta y vista previa sin tocar la tarifa ni ventas pasadas, exento sigue exento, corregir el día, cambio futuro y quitarlo, permisos, aislamiento, asociación de facturas por código principal/auxiliar) | **344/344 pasan**. Mutación: `iva_cero_en` siempre falso y sin trigger de asociación → fallan V5, V6, V10, V13 y C1 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: «IVA de ventas» → desde hoy IVA 0 % (vigente, historial); «Vender» muestra el aviso y el aceite de $3,45 sale con IVA $0,00; alta de «Recarga Claro $1» con No objeto, código REC128 e información adicional; «rec128» la encuentra en «Vender». Typecheck y Vitest (49) pasan | **Todo funciona**. La base local quedó con IVA 0 % desde hoy |
+| 2026-10-27 | GitHub Actions, run 40592019023, commit `43a0f5f` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `008_productos_sri_iva`) + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | GitHub Actions, run 40587540252, commit `cab2dff` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
 | 2026-11-02 | Navegador, 1200 px, 2 XML generados para la bodega del seed | Subir 2 archivos; aceite asociado por código de barras y vinculado a la venta a mano; arroz con código desconocido asociado a mano y venta creada. Base: aceite 9 (sin doble descuento), arroz 43,359, código recordado | **Todo funciona** |
 | 2026-11-01 | GitHub Actions, run 40584727008, commit `bab975e` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos** |
@@ -162,7 +163,6 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Push y CI del commit de productos SRI e IVA por fecha (local adelante de `origin` por 3 commits).
-2. Decidir con el dueño los hallazgos que faltan de los XML reales (ver Riesgos): productos sin stock (recargas) y crear el producto desde una línea de factura.
-3. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-4. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
+1. Decidir con el dueño los hallazgos que faltan de los XML reales (ver Riesgos): productos sin stock (recargas) y crear el producto desde una línea de factura.
+2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
+3. Puesta en producción: proyecto Supabase con respaldos, despliegue de la interfaz, alta del dueño y del vendedor reales.
