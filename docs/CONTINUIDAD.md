@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (Fase 9: caja y fiado listos y probados en local; falta CI)
+Última actualización: 2026-10-31 (Fase 9 cerrada: caja y fiado probados en local y en CI)
 
 ---
 
@@ -44,7 +44,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 6. Productos e inventario | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 7. Compras | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 8. Ventas | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
-| 9. Caja y fiado | Base de datos e interfaz probadas en local (245/245 pgTAP, 3 pruebas de concurrencia, navegador); **falta subir y CI** |
+| 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | Siguiente |
 
 ## Migraciones
@@ -90,6 +90,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-30 | GitHub Actions, run 40577693759, commit `ba6ea62` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + `venta_ultima_unidad.sh` (dos conexiones) | **Pasan todos los pasos**, también la concurrencia |
 | 2026-10-31 | Windows 11 del usuario: Supabase local | `005_caja_fiado` (50: HU-04, cierre a ciegas, límite del Vendedor, abonos, ajustes, anulación y devolución con caja y fiado, inmutabilidad, aislamiento) y `004_ventas` ajustado a la caja | **245/245 pasan**. Mutación: esperado sin abonos y Vendedor sin límite → fallan 10/50 |
 | 2026-10-31 | `npm run db:test:concurrencia` | Nuevo caso 3: dos ventas al fiado a la vez que juntas pasan el límite | **3/3 pasan**. Sin bloquear al cliente, el caso 3 falla (las dos pasan y la deuda queda en $6,90 sobre $5) |
+| 2026-10-31 | GitHub Actions, run 40581294249, commit `26102a0` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia (3 casos) | **Pasan todos los pasos** |
 | 2026-10-31 | Navegador, 1200 px y celular | Vendedor: «Cobrar» bloqueado sin caja, abrir con $20, venta en efectivo, venta al fiado a Doña Rosa (disponible $15 → $8,10), abono de $5, cierre a ciegas contando $28. Dueño: esperado $28,45, falta $0,45, explicación guardada | **Todo funciona**; la única llamada con error es el cierre de una sesión anterior al reset de la base |
 | 2026-10-30 | Navegador, 1200 px, datos del seed | Vendedor: buscar + Enter, escanear código, queso 1,25 kg, total $13,45, descuento rechazado (tope 0 %), vuelto $6,55, doble clic en «Cobrar» → una venta, pedir anulación. Dueño: costo y utilidad, anular, vender 3 Colas escaneando y devolver 1 | **Todo funciona**. Se encontró y corrigió: el doble clic mostraba «El registro ya existe» (la venta sí era una sola) |
 | 2026-10-28 | Windows 11 del usuario: API local real | Inicio de sesión de `dueno@bodega.test`, RPC `inventario_valorizado`, lectura directa de `existencias.valor_total` | Sesión ok; RPC devuelve valores como texto; lectura directa rechazada con `42501` |
@@ -133,6 +134,5 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Subir los commits de caja y fiado (`git push`) y confirmar el CI.
-2. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
-3. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
+1. Fase 10: reportes (margen, stock valorizado, kardex, ventas − devoluciones, acumulado frente al límite RIMPE) y exportación para el contador.
+2. Pendiente para más adelante: importar XML de facturas de proveedores del SRI como compras.
