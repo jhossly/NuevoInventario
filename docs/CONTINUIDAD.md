@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (compra desde XML del proveedor lista en local; sin subir)
+Última actualización: 2026-11-01 (compra desde XML del proveedor en producción; CI en verde)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con 13 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Falta: `db push --linked` de `20261109000000_compras_xml.sql` **antes** de `git push`, cargar datos y usar en paralelo con Excel |
+| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 14 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Falta: comprobar lo publicado, cargar mercadería y stock, y usar en paralelo con Excel |
 | MVP-2. Facturación electrónica | **Publicada y apagada, sin probar contra el SRI real**: quien usa el sistema no es dueño del negocio; la firma y el acceso al SRI dependen de que el dueño acepte. Mientras tanto: portal + Vender o subir el XML |
 
 ## Migraciones
@@ -129,6 +129,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-01 | GitHub Actions, run 41358341167, commit `0ad0c91`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `014_compras_xml`) + concurrencia; migración aplicada en Supabase | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `014_compras_xml` (28: rechazos, lectura con ICE y centavos, proveedor, productos, caja, costo, stock, parcial, omitir, memoria, anular, permisos) | **478/478 pasan**; Vitest 59/59 |
 | 2026-11-01 | Transacción revertida, XML real de proveedor (no se guarda en el repositorio) | 5 líneas, 1 bonificación, ICE e IRBPNR: lee y guarda subtotal 18,40 + IVA 2,76 + otros 0,72 = 21,88, igual a la factura; 38 unidades | **Cuadra al centavo** |
 | 2026-11-01 | Navegador, 1280 px, datos del seed | Factura de 2 líneas: Caja 6 nueva y aceite reconocido por código de barras; llegaron 4 de 5: costos 2,40 y 2,30, aviso de diferencia | **Todo funciona**; sin errores en consola |
