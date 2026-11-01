@@ -71,6 +71,39 @@ export const esquemaExportacion = z.object({
   resumen: z.record(z.string(), decimal),
 });
 
+export const esquemaReporteCompras = z.object({
+  totales: z.object({ compras: z.number(), anuladas: z.number(), sin_iva: decimal, iva: decimal, otros: decimal, total: decimal }),
+  por_proveedor: z.array(
+    z.object({
+      proveedor_id: uuid.nullable(),
+      nombre: z.string(),
+      compras: z.number(),
+      sin_iva: decimal,
+      iva: decimal,
+      total: decimal,
+      ultima: z.string(),
+    }),
+  ),
+  por_producto: z.array(
+    z.object({ producto_id: uuid, nombre: z.string(), unidad_base: z.string(), cantidad: decimal, total: decimal }),
+  ),
+});
+
+export const esquemaResumenMensual = z.object({
+  anio: z.number(),
+  meses: z.array(
+    z.object({
+      mes: z.number(),
+      ventas: decimal,
+      utilidad: decimal,
+      compras: decimal,
+      num_compras: z.number(),
+      sin_registrar: decimal,
+      num_sin_registrar: z.number(),
+    }),
+  ),
+});
+
 export type ReporteVentas = z.infer<typeof esquemaReporteVentas>;
 export type Margen = z.infer<typeof esquemaMargen>['productos'][number];
 export type Rimpe = z.infer<typeof esquemaRimpe>;
@@ -89,6 +122,20 @@ export function useReporteMargen(rango: Rango) {
   return useQuery({
     queryKey: ['reportes', 'margen', rango],
     queryFn: async () => (await llamar('reporte_margen', periodo(rango), esquemaMargen)).productos,
+  });
+}
+
+export function useReporteCompras(rango: Rango) {
+  return useQuery({
+    queryKey: ['reportes', 'compras', rango],
+    queryFn: () => llamar('reporte_compras', periodo(rango), esquemaReporteCompras),
+  });
+}
+
+export function useResumenMensual(anio: number) {
+  return useQuery({
+    queryKey: ['reportes', 'mensual', anio],
+    queryFn: () => llamar('resumen_mensual', { p_anio: anio }, esquemaResumenMensual),
   });
 }
 

@@ -10,8 +10,10 @@ import { enlace } from '@/shared/ruta';
 import {
   pedirExportacion,
   useAcumuladoRimpe,
+  useReporteCompras,
   useReporteMargen,
   useReporteVentas,
+  useResumenMensual,
   type Exportacion,
 } from './api';
 
@@ -64,7 +66,9 @@ export function Reportes() {
         </div>
       </Tarjeta>
 
+      <ResumenPorMes anio={Number(rango.hasta.slice(0, 4))} />
       <ResumenVentas rango={rango} />
+      <ResumenCompras rango={rango} />
       <MargenPorProducto rango={rango} />
       <AcumuladoRimpe anio={Number(rango.hasta.slice(0, 4))} />
       <Exportar rango={rango} />
@@ -125,6 +129,132 @@ function ResumenVentas({ rango }: { rango: Rango }) {
                 ))}
               </tbody>
             </table>
+          )}
+        </>
+      )}
+    </Tarjeta>
+  );
+}
+
+function ResumenPorMes({ anio }: { anio: number }) {
+  const resumen = useResumenMensual(anio);
+  const meses = (resumen.data?.meses ?? []).filter(
+    (m) => Number(m.ventas) !== 0 || Number(m.compras) !== 0 || m.num_sin_registrar > 0,
+  );
+  const sinRegistrar = meses.reduce((n, m) => n + m.num_sin_registrar, 0);
+  return (
+    <Tarjeta className="mb-4">
+      <h2 className="mb-3 font-semibold">Mes a mes de {anio}</h2>
+      {resumen.isPending && <Cargando />}
+      <AvisoError error={resumen.error} />
+      {resumen.isSuccess && meses.length === 0 && <p className="text-gray-500">Todavía no hay ventas ni compras este año.</p>}
+      {meses.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[30rem] text-sm tabular-nums">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="font-normal">Mes</th>
+                <th className="text-right font-normal">Ventas</th>
+                <th className="text-right font-normal">Utilidad</th>
+                <th className="text-right font-normal">Compras</th>
+                {sinRegistrar > 0 && <th className="text-right font-normal">Facturas sin registrar</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {meses.map((m) => (
+                <tr key={m.mes} className="border-t border-gray-100">
+                  <td className="py-1">{MESES[m.mes - 1]}</td>
+                  <td className="text-right">{formatearDinero(m.ventas)}</td>
+                  <td className="text-right">{formatearDinero(m.utilidad)}</td>
+                  <td className="text-right">{formatearDinero(m.compras)}</td>
+                  {sinRegistrar > 0 && (
+                    <td className="text-right">{m.num_sin_registrar > 0 ? formatearDinero(m.sin_registrar) : '—'}</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {sinRegistrar > 0 && (
+        <p className="mt-2 text-sm text-amber-800">
+          Hay facturas de venta subidas que aún no suman a las ventas: resuélvelas en{' '}
+          <a href={enlace({ nombre: 'comprobantes' })} className="underline">
+            Facturas SRI
+          </a>
+          .
+        </p>
+      )}
+    </Tarjeta>
+  );
+}
+
+function ResumenCompras({ rango }: { rango: Rango }) {
+  const reporte = useReporteCompras(rango);
+  const r = reporte.data;
+  return (
+    <Tarjeta className="mb-4">
+      <h2 className="mb-3 font-semibold">Compras</h2>
+      {reporte.isPending && <Cargando />}
+      <AvisoError error={reporte.error} />
+      {r && (
+        <>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Cifra titulo="Total comprado" valor={formatearDinero(r.totales.total)} nota={r.totales.compras === 1 ? '1 compra' : `${r.totales.compras} compras`} />
+            <Cifra titulo="Sin IVA" valor={formatearDinero(r.totales.sin_iva)} />
+            <Cifra titulo="IVA" valor={formatearDinero(r.totales.iva)} />
+            <Cifra titulo="ICE y otros" valor={formatearDinero(r.totales.otros)} />
+          </div>
+          {r.por_proveedor.length === 0 && <p className="mt-3 text-gray-500">No hay compras en este período.</p>}
+          {r.por_proveedor.length > 0 && (
+            <>
+              <h3 className="mb-1 mt-4 text-sm font-semibold">Por proveedor</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[30rem] text-sm tabular-nums">
+                  <thead>
+                    <tr className="text-left text-gray-500">
+                      <th className="font-normal">Proveedor</th>
+                      <th className="text-right font-normal">Compras</th>
+                      <th className="text-right font-normal">Última</th>
+                      <th className="text-right font-normal">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {r.por_proveedor.map((p) => (
+                      <tr key={p.proveedor_id ?? 'sin-proveedor'} className="border-t border-gray-100">
+                        <td className="py-1">{p.nombre}</td>
+                        <td className="text-right">{p.compras}</td>
+                        <td className="text-right">{p.ultima}</td>
+                        <td className="text-right font-medium">{formatearDinero(p.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <h3 className="mb-1 mt-4 text-sm font-semibold">Lo que más se compró</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[24rem] text-sm tabular-nums">
+                  <thead>
+                    <tr className="text-left text-gray-500">
+                      <th className="font-normal">Producto</th>
+                      <th className="text-right font-normal">Cantidad</th>
+                      <th className="text-right font-normal">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {r.por_producto.map((p) => (
+                      <tr key={p.producto_id} className="border-t border-gray-100">
+                        <td className="py-1">{p.nombre}</td>
+                        <td className="text-right">
+                          {formatearCantidad(p.cantidad)} {p.unidad_base === 'UND' ? 'u' : p.unidad_base.toLowerCase()}
+                        </td>
+                        <td className="text-right">{formatearDinero(p.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </>
       )}

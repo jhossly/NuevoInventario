@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (compra desde XML del proveedor en producción; CI en verde)
+Última actualización: 2026-11-01 (reportes de compras y mes a mes, local; sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-054). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-055). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -47,8 +47,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 14 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Falta: comprobar lo publicado, cargar mercadería y stock, y usar en paralelo con Excel |
-| MVP-2. Facturación electrónica | **Publicada y apagada, sin probar contra el SRI real**: quien usa el sistema no es dueño del negocio; la firma y el acceso al SRI dependen de que el dueño acepte. Mientras tanto: portal + Vender o subir el XML |
+| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con 14 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Falta: `db push --linked` de `20261110000000_reportes_compras.sql` **antes** de `git push`, cargar datos y usar en paralelo con Excel |
+| MVP-2. Facturación electrónica | **Publicada y apagada, en pausa**: el SRI no dio paso al ambiente de pruebas. Se sigue emitiendo en el portal y subiendo los XML |
 
 ## Migraciones
 
@@ -68,6 +68,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261107000000_eliminar_productos.sql` | Expuestas, solo Dueño: `eliminar_producto` (devuelve la imagen para borrarla de Storage) y `eliminar_presentacion` |
 | `20261108000000_facturacion.sql` | Configuración en `empresas` (activa, ambiente, establecimiento, punto de emisión, contabilidad, leyenda RIMPE), `secuencias_factura`, `facturas_electronicas` (inmutable al autorizarse). `privado.xml_factura`. Expuestas: `preparar_factura`, `guardar_facturacion`; `registrar_resultado_factura` solo para service_role. `mi_contexto` devuelve `facturacion_activa` y `ambiente_sri` |
 | `20261109000000_compras_xml.sql` | `compras.otros_impuestos`, `clave_acceso` (única), `total_factura`, `xml`; `compra_detalles.otros_impuestos`, `descripcion_factura`; `codigos_proveedor`. Expuestas, solo Dueño: `leer_factura_proveedor` (no guarda), `registrar_compra_de_factura` |
+| `20261110000000_reportes_compras.sql` | Expuestas, solo Dueño: `reporte_compras`, `resumen_mensual` |
 
 Edge Function `supabase/functions/facturar`: `firma.ts` (XAdES-BES con node-forge), `sri.ts` (SOAP), `index.ts`. Secretos: `FIRMA_P12_BASE64`, `FIRMA_CONTRASENA`. Interfaz: `src/modules/facturacion` (estado en la venta, RIDE imprimible en `#/factura/<venta>`, configuración en Mi negocio); «Vender» emite solo al cobrar con Factura.
 
@@ -129,6 +130,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-01 | Windows 11 del usuario: Supabase local y navegador | `015_reportes_compras` (12: totales, por proveedor, por producto, anuladas fuera, 12 meses, facturas sin registrar, permisos, aislamiento); pantalla de Reportes con una compra de muestra | **490/490 pasan**; Vitest 59/59 |
 | 2026-11-01 | GitHub Actions, run 41358341167, commit `0ad0c91`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `014_compras_xml`) + concurrencia; migración aplicada en Supabase | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `014_compras_xml` (28: rechazos, lectura con ICE y centavos, proveedor, productos, caja, costo, stock, parcial, omitir, memoria, anular, permisos) | **478/478 pasan**; Vitest 59/59 |
 | 2026-11-01 | Transacción revertida, XML real de proveedor (no se guarda en el repositorio) | 5 líneas, 1 bonificación, ICE e IRBPNR: lee y guarda subtotal 18,40 + IVA 2,76 + otros 0,72 = 21,88, igual a la factura; 38 unidades | **Cuadra al centavo** |
