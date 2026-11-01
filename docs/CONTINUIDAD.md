@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-27 (Fase 12 en curso: guía de producción y script de alta listos)
+Última actualización: 2026-10-31 (Fase 12 en curso: migraciones aplicadas en Supabase)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: guía `docs/PRODUCCION.md` y `supabase/produccion/alta_bodega.sql` listos; faltan las cuentas del dueño (Supabase, Vercel) |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) enlazado y con las 9 migraciones aplicadas. Falta desde el paso 3 de `docs/PRODUCCION.md`: cerrar registro, usuarios, alta y Vercel |
 
 ## Migraciones
 

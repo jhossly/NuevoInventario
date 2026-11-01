@@ -43,10 +43,10 @@ Se abre el navegador para autorizar. Luego:
 npx supabase link --project-ref TU_REFERENCE_ID
 ```
 
-Pide la **Database password** del paso 1. Luego:
+Debe terminar con `Finished supabase link`. Con la sesión iniciada puede no pedir la contraseña: es normal. Si la pide, escríbela solo en esa pregunta; no se ve mientras se escribe. El comando se corre una vez y lleva solo el Reference ID. Luego:
 
 ```bash
-npx supabase db push
+npx supabase db push --linked
 ```
 
 Muestra la lista de migraciones (`20261027000000_base_seguridad.sql` … `20261104000000_productos_sin_stock.sql`) y pregunta si las aplica: responde `Y`. **No** sube los datos de prueba (`seed.sql`): la base queda vacía.
@@ -132,4 +132,4 @@ Desde la computadora y desde el celular, abre la dirección de Vercel:
 
 - **Olvidaron una contraseña:** Authentication → Users → el usuario → cambiarle la contraseña.
 - **Alguien deja de trabajar:** en la base, su membresía se desactiva (pídelo en una sesión de trabajo); sus ventas quedan registradas con su nombre.
-- **Cambios futuros del sistema:** después de cada cambio con migración nueva, `npx supabase db push` (sube solo lo nuevo) y `git push` (Vercel publica la página).
+- **Cambios futuros del sistema:** después de cada cambio con migración nueva, `npx supabase db push --linked` (sube solo lo nuevo) y `git push` (Vercel publica la página).
