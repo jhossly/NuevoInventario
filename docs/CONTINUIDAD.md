@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (eliminar productos sin historial; local, sin subir)
+Última actualización: 2026-11-01 (MVP-2: facturación electrónica construida y probada contra un SRI simulado; sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-052). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-053). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -47,7 +47,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) y página en Vercel (usar el dominio de producción, no los enlaces con código de despliegue). Falta: `db push --linked` de `20261107000000_eliminar_productos.sql` **antes** de `git push`, comprobar, cargar stock y usar en paralelo con Excel |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) y página en Vercel (usar el dominio de producción). Sin subir: migraciones `20261107` y `20261108`, función `facturar` y pantallas (`db push --linked` **antes** de `git push`) |
+| MVP-2. Facturación electrónica | **Construida, sin probar contra el SRI real**: falta el .p12 del dueño, el ambiente de pruebas y el código de barras del RIDE |
 
 ## Migraciones
 
@@ -65,6 +66,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261105000000_mi_negocio.sql` | `empresas.direccion`, `telefono`, `logo` (data URL validada). Expuesta, solo Dueño: `guardar_mi_negocio`. `mi_contexto` devuelve también `logo` |
 | `20261106000000_medidas_imagenes_lote.sql` | `unidades_medida` (con trigger para cada empresa nueva); `productos.imagen`; FK de `unidad_base` a medidas; depósito Storage `productos` con su política. Expuestas: `guardar_medida`, `eliminar_medida`, `crear_productos_de_lineas` y nueva versión de `guardar_producto` |
 | `20261107000000_eliminar_productos.sql` | Expuestas, solo Dueño: `eliminar_producto` (devuelve la imagen para borrarla de Storage) y `eliminar_presentacion` |
+| `20261108000000_facturacion.sql` | Configuración en `empresas` (activa, ambiente, establecimiento, punto de emisión, contabilidad, leyenda RIMPE), `secuencias_factura`, `facturas_electronicas` (inmutable al autorizarse). `privado.xml_factura`. Expuestas: `preparar_factura`, `guardar_facturacion`; `registrar_resultado_factura` solo para service_role. `mi_contexto` devuelve `facturacion_activa` y `ambiente_sri` |
+
+Edge Function `supabase/functions/facturar`: `firma.ts` (XAdES-BES con node-forge), `sri.ts` (SOAP), `index.ts`. Secretos: `FIRMA_P12_BASE64`, `FIRMA_CONTRASENA`. Interfaz: `src/modules/facturacion` (estado en la venta, RIDE imprimible en `#/factura/<venta>`, configuración en Mi negocio); «Vender» emite solo al cobrar con Factura.
 
 Interfaz (rediseño): `src/shared/Marco.tsx` (panel lateral y barra inferior), `Buscador` en todas las listas, medidas en `Medidas.tsx`, foto en el producto (`FotoProducto.tsx`), «Vender» con cuadros, facturas con búsqueda de producto y «Crear todos». Dependencia nueva: `lucide-react`.
 
@@ -122,6 +126,9 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
+| 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
+| 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-01 | Edge runtime local + SRI simulado + navegador | Con .p12 de prueba: venta, firma, recepción y autorización; repetir no gasta número; «Vender» emite solo y muestra «Autorizada»; RIDE y configuración. Las etiquetas salen en el mismo orden que la factura real | **Funciona**. NO probado contra el SRI real, ni desde la región de Supabase |
 | 2026-10-31 | Windows 11 del usuario: Supabase local y navegador | `012_eliminar_productos` (14) y prueba en pantalla: producto con stock rechazado, presentación y producto nuevos eliminados, vuelve a la lista; «Crear todos» muestra «2 productos nuevos.». Se corrigió que ambas acciones perdían su aviso al desmontarse la pantalla (`mutateAsync`) | **419/419 pasan**; typecheck y Vitest (49) pasan |
 | 2026-10-31 | GitHub Actions, run 41265968428, commit `068e9d2` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `011_medidas_imagenes_lote`) + concurrencia | **Pasan todos los pasos** |
 | 2026-10-31 | Windows 11 del usuario: Supabase local | `011_medidas_imagenes_lote` (24: medidas, producto en paquetes, ruta de imagen, lote con mismo código, mismo nombre, precio con IVA, sin stock, todo o nada, permisos, aislamiento). Vendedor sube foto por la API de Storage → 403 | **405/405 pasan** |
@@ -188,6 +195,8 @@ Ninguno abierto. Resueltos:
 
 ## Próximas tareas
 
-1. Ojo: un producto recién creado tiene stock 0; para «crear la venta» desde la factura hace falta cargar su stock (apertura o compra) o desmarcar «Controla stock».
-2. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
-3. Puesta en producción siguiendo `docs/PRODUCCION.md`: el dueño crea las cuentas de Supabase y Vercel; luego `db push`, cerrar registro, usuarios, `alta_bodega.sql`, Vercel con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, comprobar, cargar datos y 1–2 semanas en paralelo con Excel.
+1. Facturación: conseguir .p12 y ambiente de pruebas, seguir «Facturar desde la app» en `docs/PRODUCCION.md`, y agregar el código de barras al RIDE. Riesgo a comprobar: que el SRI acepte conexiones desde us-west-2.
+2. Importar XML de proveedor como compra (pedido del dueño): revisión antes de guardar, cajas/unidades, ICE, IRBPNR y bonificaciones.
+3. Ojo: un producto recién creado tiene stock 0; para «crear la venta» desde la factura hace falta cargar su stock (apertura o compra) o desmarcar «Controla stock».
+4. Llevar las preguntas pendientes al contador (ver Riesgos) y ajustar la configuración: precios con IVA, IVA de compras como costo, montos del comprobante, límite RIMPE y formato de la exportación.
+5. Puesta en producción siguiendo `docs/PRODUCCION.md`: el dueño crea las cuentas de Supabase y Vercel; luego `db push`, cerrar registro, usuarios, `alta_bodega.sql`, Vercel con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, comprobar, cargar datos y 1–2 semanas en paralelo con Excel.

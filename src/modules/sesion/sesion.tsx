@@ -14,6 +14,9 @@ const esquemaContexto = z.object({
   rol: z.enum(['DUENO', 'VENDEDOR']),
   ve_costos: z.boolean(),
   precios_incluyen_iva: z.boolean(),
+  // Opcionales: la app nueva no se cae si la base aún no se actualiza.
+  facturacion_activa: z.boolean().optional(),
+  ambiente_sri: z.string().optional(),
 });
 
 export type Contexto = z.infer<typeof esquemaContexto>;

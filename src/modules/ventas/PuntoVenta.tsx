@@ -11,6 +11,8 @@ import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Buscador, Campo, Cargando, Selector, Tarjeta } from '@/shared/ui';
 import { FotoProducto } from '@/modules/catalogo/FotoProducto';
+import { ESTADOS_FACTURA, useEmitirFactura } from '@/modules/facturacion/api';
+import { useContexto } from '@/modules/sesion/sesion';
 import { FormCliente } from './Clientes';
 import {
   COMPROBANTES,
@@ -65,12 +67,15 @@ export function PuntoVenta() {
 
   const [busqueda, setBusqueda] = useState('');
   const [lineas, setLineas] = useState<LineaEnPantalla[]>([]);
-  const [tipo, setTipo] = useState<TipoComprobante>('NOTA_VENTA');
-  const [clienteId, setClienteId] = useState('');
+    const [clienteId, setClienteId] = useState('');
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [medio, setMedio] = useState<Medio>('EFECTIVO');
   const [recibido, setRecibido] = useState('');
   const [clave, setClave] = useState(nuevaClave);
+  const contexto = useContexto();
+  const emitir = useEmitirFactura();
+  const tipoInicial: TipoComprobante = contexto.facturacion_activa ? 'FACTURA' : 'NOTA_VENTA';
+  const [tipo, setTipo] = useState<TipoComprobante>(tipoInicial);
   const [ultima, setUltima] = useState<{ id: string; total: string; vuelto: string | null } | null>(null);
 
   const opciones = useMemo<Opcion[]>(() => {
@@ -164,10 +169,13 @@ export function PuntoVenta() {
       {
         onSuccess: (r) => {
           setUltima({ id: r.venta_id, total: r.total, vuelto: medio === 'EFECTIVO' ? vuelto : null });
+          // La venta ya está guardada: la factura sale aparte y puede reintentarse.
+          emitir.reset();
+          if (tipo === 'FACTURA' && contexto.facturacion_activa) emitir.mutate(r.venta_id);
           setLineas([]);
           setRecibido('');
           setClienteId('');
-          setTipo('NOTA_VENTA');
+          setTipo(tipoInicial);
           setMedio('EFECTIVO');
           setClave(nuevaClave());
           buscador.current?.focus();
@@ -231,6 +239,15 @@ export function PuntoVenta() {
                 Ver venta
               </a>
             </Aviso>
+            {emitir.isPending && <p className="mt-1 text-sm text-gray-600">Enviando la factura al SRI…</p>}
+            {emitir.data && (
+              <p className="mt-1 text-sm font-medium">
+                {ESTADOS_FACTURA[emitir.data as keyof typeof ESTADOS_FACTURA] ?? emitir.data}
+              </p>
+            )}
+            <div className="mt-1">
+              <AvisoError error={emitir.error} />
+            </div>
           </div>
         )}
 

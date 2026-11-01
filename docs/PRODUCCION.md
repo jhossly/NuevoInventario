@@ -119,6 +119,65 @@ Desde la computadora y desde el celular, abre la dirección de Vercel:
 
 ---
 
+## Facturar desde la app
+
+Hazlo primero en **pruebas**. Hasta pasar a producción, sigue emitiendo en el portal del SRI.
+
+### Lo que se necesita
+
+- Firma electrónica en **archivo `.p12`** (no sirve el token USB), vigente, y su contraseña.
+- Ambiente de pruebas autorizado: en SRI en Línea, en la sección de comprobantes electrónicos.
+- Confirmado con el contador: que un sistema de uso propio no exige el registro de proveedores, qué punto de emisión usar y qué forma de pago llevan las ventas al fiado.
+
+### 1. Subir la base y el servicio
+
+```bash
+npx supabase db push --linked
+```
+
+```bash
+npx supabase functions deploy facturar
+```
+
+Luego `git push` para que Vercel publique las pantallas.
+
+### 2. Guardar la firma en Supabase
+
+La firma **nunca** se pega en el chat, en GitHub, en Vercel ni en un archivo del proyecto. En PowerShell, cambia la ruta y copia el archivo como texto:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\ruta\mi-firma.p12")) | Set-Clipboard
+```
+
+En Supabase: **Edge Functions → Secrets → Add new secret**:
+
+- `FIRMA_P12_BASE64`: pega lo copiado.
+- `FIRMA_CONTRASENA`: la contraseña de la firma.
+
+No crees `SRI_SERVIDOR_PRUEBAS` en Supabase: es solo para ensayos en la computadora.
+
+### 3. Configurar y probar
+
+1. **Mi negocio:** razón social y dirección completas.
+2. **Mi negocio → Facturación electrónica:** marca «Facturar desde esta app», ambiente **Pruebas**, tu establecimiento y un punto de emisión distinto al del portal.
+3. En **Vender**, cobra una venta como Factura. Debe decir «Autorizada por el SRI»; abre la venta y revisa **Ver factura**.
+4. Prueba también: cliente con cédula, cliente con RUC, consumidor final, un producto con 15 %, uno exento o no objeto, y cantidades con decimales.
+
+Si sale «Devuelta» o «No autorizada», el SRI explica el motivo en la venta. Copia ese mensaje, sin contraseñas, para corregirlo.
+
+### 4. Pasar a producción
+
+Solo cuando las pruebas salgan bien y el contador esté de acuerdo:
+
+1. Pide al SRI la habilitación de producción, si te la exige.
+2. En Mi negocio cambia el ambiente a **Producción**.
+3. En «Último número usado» pon el último de ese punto de emisión (0 si es nuevo).
+4. Emite una factura real de valor pequeño y compruébala en el portal del SRI.
+
+Desde ahí, no emitas la misma venta también en el portal. Anular una factura autorizada sigue haciéndose en el portal.
+
+---
+
 ## Respaldos
 
 - **Plan Pro:** Supabase guarda un respaldo diario (7 días). Recomendado.

@@ -162,8 +162,8 @@ export function Marco({
   }, [ruta]);
 
   return (
-    <div className="min-h-dvh md:pl-64">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-gray-200 bg-white p-3 md:flex">
+    <div className="min-h-dvh md:pl-64 print:pl-0">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-gray-200 bg-white p-3 md:flex print:hidden">
         <div className="mb-4 px-1 py-1">
           <Identidad contexto={contexto} />
         </div>
@@ -173,14 +173,14 @@ export function Marco({
         <Salir correo={correo} contexto={contexto} />
       </aside>
 
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-2 md:hidden">
+      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-2 md:hidden print:hidden">
         <Identidad contexto={contexto} />
       </header>
 
-      <main className="mx-auto max-w-5xl p-4 pb-24 md:pb-4">{children}</main>
+      <main className="mx-auto max-w-5xl p-4 pb-24 md:pb-4 print:p-0">{children}</main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-gray-200 bg-white md:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-gray-200 bg-white md:hidden print:hidden"
         aria-label="Menú rápido"
       >
         {BARRA_INFERIOR.map((nombre) => {

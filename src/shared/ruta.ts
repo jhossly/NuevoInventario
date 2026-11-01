@@ -26,6 +26,7 @@ export type Ruta =
   | { nombre: 'iva-ventas' }
   | { nombre: 'mi-negocio' }
   | { nombre: 'medidas' }
+  | { nombre: 'factura'; id: string }
   | { nombre: 'no-encontrada' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +49,10 @@ export function leerRuta(hash: string): Ruta {
   if (primera === 'iva-ventas' && segunda === undefined) return { nombre: 'iva-ventas' };
   if (primera === 'mi-negocio' && segunda === undefined) return { nombre: 'mi-negocio' };
   if (primera === 'medidas' && segunda === undefined) return { nombre: 'medidas' };
+  if (primera === 'factura') {
+    if (tercera !== undefined || !segunda || !UUID.test(segunda)) return { nombre: 'no-encontrada' };
+    return { nombre: 'factura', id: segunda };
+  }
   if (primera === 'ventas') {
     if (tercera !== undefined) return { nombre: 'no-encontrada' };
     if (segunda === undefined) return { nombre: 'ventas' };
@@ -114,6 +119,8 @@ export function enlace(ruta: Ruta): string {
       return '#/mi-negocio';
     case 'medidas':
       return '#/medidas';
+    case 'factura':
+      return `#/factura/${ruta.id}`;
   }
 }
 

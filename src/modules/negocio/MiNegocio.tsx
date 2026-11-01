@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { leerDecimal, paraEditar } from '@/shared/decimal';
+import { ConfigFacturacion } from '@/modules/facturacion/ConfigFacturacion';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
 import { reducirLogo, useGuardarNegocio, useNegocio, type Negocio } from './api';
 
@@ -22,6 +23,7 @@ export function MiNegocio() {
       {negocio.isPending && <Cargando />}
       <AvisoError error={negocio.error} />
       {negocio.data && <Formulario negocio={negocio.data} />}
+      {negocio.data && <ConfigFacturacion />}
     </>
   );
 }

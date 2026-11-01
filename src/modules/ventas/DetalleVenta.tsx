@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FacturaVenta } from '@/modules/facturacion/FacturaVenta';
 import { useContexto } from '@/modules/sesion/sesion';
 import { leerDecimal } from '@/shared/decimal';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
@@ -73,6 +74,8 @@ function Detalle({ venta, volver }: { venta: Venta; volver: string }) {
           </dd>
         </dl>
       </Tarjeta>
+
+      {venta.tipo_comprobante === 'FACTURA' && <FacturaVenta ventaId={venta.id} anulada={venta.estado === 'ANULADA'} />}
 
       <Tarjeta className="mb-4">
         <ol className="divide-y divide-gray-100">

@@ -14,6 +14,7 @@ import { PuntoVenta } from '@/modules/ventas/PuntoVenta';
 import { IvaVentas } from '@/modules/ventas/IvaVentas';
 import { MiNegocio } from '@/modules/negocio/MiNegocio';
 import { Medidas } from '@/modules/catalogo/Medidas';
+import { Ride } from '@/modules/facturacion/Ride';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
@@ -119,6 +120,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<MiNegocio />);
     case 'medidas':
       return soloDueno(<Medidas />);
+    case 'factura':
+      return <Ride ventaId={ruta.id} />;
     case 'no-encontrada':
       return (
         <Tarjeta>
