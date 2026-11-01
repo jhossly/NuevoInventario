@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (rediseño: panel lateral, iconos, medidas, fotos, búsquedas y crear en lote; sin subir)
+Última actualización: 2026-10-31 (rediseño en Supabase y GitHub, CI en verde; falta comprobar la página publicada)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) y página en Vercel. Falta: `db push --linked` de `20261106000000_medidas_imagenes_lote.sql` **antes** de `git push`, comprobar, cargar datos y usar en paralelo con Excel |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 11 migraciones, depósito de fotos y 23 productos; página en Vercel. Falta: comprobar el rediseño publicado, cargar stock inicial y usar en paralelo con Excel |
 
 ## Migraciones
 
@@ -121,6 +121,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
+| 2026-10-31 | GitHub Actions, run 41265968428, commit `068e9d2` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `011_medidas_imagenes_lote`) + concurrencia | **Pasan todos los pasos** |
 | 2026-10-31 | Windows 11 del usuario: Supabase local | `011_medidas_imagenes_lote` (24: medidas, producto en paquetes, ruta de imagen, lote con mismo código, mismo nombre, precio con IVA, sin stock, todo o nada, permisos, aislamiento). Vendedor sube foto por la API de Storage → 403 | **405/405 pasan** |
 | 2026-10-31 | Navegador, 1024 px y celular, datos del seed | Panel lateral y menú «Más»; «Vender» con cuadros; foto de 900 px subida a Storage y vista a 400 px en la lista; factura con 3 líneas y «Crear todos» → 3 productos y factura lista; sin desborde a 375 px. Typecheck, Vitest (49) y build pasan | **Todo funciona**. No se probó en Supabase real ni con el Vendedor en pantalla |
 | 2026-10-31 | GitHub Actions, run 41262167949, commit `4f5cc53` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `010_mi_negocio`) + concurrencia | **Pasan todos los pasos** |
