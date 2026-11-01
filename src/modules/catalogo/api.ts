@@ -47,6 +47,8 @@ export type Categoria = z.infer<typeof esquemaCategoria>;
 
 const esquemaId = z.object({ id: uuid });
 
+const DEPOSITO = 'productos';
+
 // Los numeric se piden como texto (D-019). existencias se pide por columna:
 // `select *` fallaría por el permiso por columna.
 const COLUMNAS_PRODUCTO = [
@@ -193,6 +195,28 @@ export function useGuardarProducto() {
   });
 }
 
+/** Solo lo que no tiene historial (D-052); la base explica si no se puede. */
+export function useEliminarProducto() {
+  const invalidar = useInvalidarCatalogo();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const r = await llamar('eliminar_producto', { p_id: id }, z.object({ id: uuid, imagen: z.string().nullable() }));
+      // La foto es solo un archivo huérfano si esto falla: no detiene nada.
+      if (r.imagen) await supabase.storage.from(DEPOSITO).remove([r.imagen]);
+      return r;
+    },
+    onSuccess: invalidar,
+  });
+}
+
+export function useEliminarPresentacion() {
+  const invalidar = useInvalidarCatalogo();
+  return useMutation({
+    mutationFn: (id: string) => llamar('eliminar_presentacion', { p_id: id }, esquemaId),
+    onSuccess: invalidar,
+  });
+}
+
 export function useGuardarPresentacion() {
   const invalidar = useInvalidarCatalogo();
   return useMutation({
@@ -246,7 +270,6 @@ export function useEliminarMedida() {
 // -----------------------------------------------------------------------------
 // Imagen del producto (D-049)
 // -----------------------------------------------------------------------------
-const DEPOSITO = 'productos';
 
 /** Reduce la foto y la sube a la carpeta de la bodega; devuelve su ruta. */
 export async function subirImagenProducto(archivo: File, empresaId: string): Promise<string> {

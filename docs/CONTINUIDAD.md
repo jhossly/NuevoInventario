@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (rediseño en Supabase y GitHub, CI en verde; falta comprobar la página publicada)
+Última actualización: 2026-10-31 (eliminar productos sin historial; local, sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-051). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-052). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 11 migraciones, depósito de fotos y 23 productos; página en Vercel. Falta: comprobar el rediseño publicado, cargar stock inicial y usar en paralelo con Excel |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) y página en Vercel (usar el dominio de producción, no los enlaces con código de despliegue). Falta: `db push --linked` de `20261107000000_eliminar_productos.sql` **antes** de `git push`, comprobar, cargar stock y usar en paralelo con Excel |
 
 ## Migraciones
 
@@ -64,6 +64,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261104000000_productos_sin_stock.sql` | `productos.controla_stock`. Nuevas versiones de `privado.registrar_movimiento` (sin control de stock: no toca existencias ni kardex, costo = `existencias.ultimo_costo` o 0; la compra actualiza ese costo; apertura/ajuste/merma/conteo se rechazan), `guardar_producto` (claves `controla_stock` y `costo_servicio`; solo se apaga con stock en cero) e `inventario_valorizado` (devuelve `controla_stock` y `ultimo_costo`) |
 | `20261105000000_mi_negocio.sql` | `empresas.direccion`, `telefono`, `logo` (data URL validada). Expuesta, solo Dueño: `guardar_mi_negocio`. `mi_contexto` devuelve también `logo` |
 | `20261106000000_medidas_imagenes_lote.sql` | `unidades_medida` (con trigger para cada empresa nueva); `productos.imagen`; FK de `unidad_base` a medidas; depósito Storage `productos` con su política. Expuestas: `guardar_medida`, `eliminar_medida`, `crear_productos_de_lineas` y nueva versión de `guardar_producto` |
+| `20261107000000_eliminar_productos.sql` | Expuestas, solo Dueño: `eliminar_producto` (devuelve la imagen para borrarla de Storage) y `eliminar_presentacion` |
 
 Interfaz (rediseño): `src/shared/Marco.tsx` (panel lateral y barra inferior), `Buscador` en todas las listas, medidas en `Medidas.tsx`, foto en el producto (`FotoProducto.tsx`), «Vender» con cuadros, facturas con búsqueda de producto y «Crear todos». Dependencia nueva: `lucide-react`.
 
@@ -121,6 +122,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
+| 2026-10-31 | Windows 11 del usuario: Supabase local y navegador | `012_eliminar_productos` (14) y prueba en pantalla: producto con stock rechazado, presentación y producto nuevos eliminados, vuelve a la lista; «Crear todos» muestra «2 productos nuevos.». Se corrigió que ambas acciones perdían su aviso al desmontarse la pantalla (`mutateAsync`) | **419/419 pasan**; typecheck y Vitest (49) pasan |
 | 2026-10-31 | GitHub Actions, run 41265968428, commit `068e9d2` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `011_medidas_imagenes_lote`) + concurrencia | **Pasan todos los pasos** |
 | 2026-10-31 | Windows 11 del usuario: Supabase local | `011_medidas_imagenes_lote` (24: medidas, producto en paquetes, ruta de imagen, lote con mismo código, mismo nombre, precio con IVA, sin stock, todo o nada, permisos, aislamiento). Vendedor sube foto por la API de Storage → 403 | **405/405 pasan** |
 | 2026-10-31 | Navegador, 1024 px y celular, datos del seed | Panel lateral y menú «Más»; «Vender» con cuadros; foto de 900 px subida a Storage y vista a 400 px en la lista; factura con 3 líneas y «Crear todos» → 3 productos y factura lista; sin desborde a 375 px. Typecheck, Vitest (49) y build pasan | **Todo funciona**. No se probó en Supabase real ni con el Vendedor en pantalla |

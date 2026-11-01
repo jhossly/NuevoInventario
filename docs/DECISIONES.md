@@ -56,6 +56,7 @@ se marca como **Reemplazada por D-XXX** y se agrega la nueva.
 | D-049 | 2026-10-31 | La foto del producto se reduce a 400 px en el navegador y va a Storage (depósito público `productos`, carpeta por bodega, escribe solo el Dueño); `productos.imagen` guarda la ruta. Las fotos NO entran en `db dump` | A diferencia del logo, la lista de productos viaja entera a cada celular: con cientos de fotos dentro de la fila pesaría megas | Vigente |
 | D-050 | 2026-10-31 | Crear en lote desde facturas (`crear_productos_de_lineas`): todo o nada; una línea con el mismo código se une a la ya creada y una con el mismo nombre de un producto activo usa ese producto. Precio con IVA si los precios lo incluyen; opción de crearlos sin control de stock | Cargar el catálogo sin crear producto por producto | Vigente |
 | D-051 | 2026-10-31 | Navegación por panel lateral agrupado (Día a día, Mercadería, Negocio) y, en el celular, barra inferior con «Más». Iconos de `lucide-react`, sin emojis. «Vender» muestra cuadros con foto, nombre y precio | Pedido del dueño: la interfaz debe guiar también a quien casi no lee | Vigente |
+| D-052 | 2026-10-31 | Eliminar de verdad solo lo que nunca se usó (`eliminar_producto`, `eliminar_presentacion`): sin movimientos, ventas, compras, conteos ni líneas de facturas. Lo demás se desactiva. La presentación base no se elimina salvo que haya otra de factor 1. La auditoría conserva lo eliminado | Limpiar pruebas sin tocar el kardex ni las ventas, que son inmutables | Vigente |
 
 ## Dependencias y por qué
 

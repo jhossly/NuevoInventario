@@ -173,15 +173,14 @@ function BotonLote({ lineas, texto, alCrear }: { lineas: string[]; texto: string
       <Boton
         icono={Layers}
         disabled={crear.isPending || lineas.length === 0}
-        onClick={() =>
-          crear.mutate(
-            { lineas, controlaStock: !sinStock },
-            {
-              onSuccess: (r) =>
-                alCrear(`${productosEnTexto(r.creados)} nuevos${r.existentes > 0 ? `, ${r.existentes} ya existían` : ''}.`),
-            },
-          )
-        }
+        onClick={() => {
+          // Con mutateAsync: al no quedar líneas este botón se desmonta y el
+          // onSuccess de mutate ya no se llamaría. El error lo muestra crear.error.
+          crear.mutateAsync({ lineas, controlaStock: !sinStock }).then(
+            (r) => alCrear(`${productosEnTexto(r.creados)} nuevos${r.existentes > 0 ? `, ${r.existentes} ya existían` : ''}.`),
+            () => undefined,
+          );
+        }}
       >
         {crear.isPending ? 'Creando…' : texto}
       </Boton>

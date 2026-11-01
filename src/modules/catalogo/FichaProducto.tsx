@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { useContexto } from '@/modules/sesion/sesion';
 import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
-import { enlace } from '@/shared/ruta';
+import { enlace, navegar } from '@/shared/ruta';
 import { AvisoError, Boton, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { FormPresentacion } from './FormPresentacion';
 import { FormProducto } from './FormProducto';
-import { unidadCorta, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useProducto, type Producto } from './api';
+import { unidadCorta, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useEliminarPresentacion, useEliminarProducto, useProducto, type Producto } from './api';
 
 export function FichaProducto({ id }: { id: string }) {
   const producto = useProducto(id);
@@ -97,6 +98,7 @@ function Ficha({ producto }: { producto: Producto }) {
             producto={producto}
             costoServicio={costo ? costo.ultimo_costo : undefined}
           />
+          <EliminarProducto producto={producto} />
         </Tarjeta>
       ) : (
         <Tarjeta className="mt-4">
@@ -130,9 +132,39 @@ function Ficha({ producto }: { producto: Producto }) {
   );
 }
 
+function EliminarProducto({ producto }: { producto: Producto }) {
+  const eliminar = useEliminarProducto();
+  return (
+    <div className="mt-6 border-t border-gray-200 pt-4">
+      <p className="mb-2 text-sm text-gray-600">
+        Solo se elimina un producto sin movimientos ni ventas. Si ya tiene historial, desmarca «Activo».
+      </p>
+      <AvisoError error={eliminar.error} />
+      <Boton
+        variante="peligro"
+        icono={Trash2}
+        className="mt-2"
+        disabled={eliminar.isPending}
+        onClick={() => {
+          if (!window.confirm(`¿Eliminar ${producto.nombre}? No se puede deshacer.`)) return;
+          // Con mutateAsync: al desaparecer de la lista esta pantalla se desmonta,
+          // y el onSuccess de mutate ya no se llamaría. El error lo muestra eliminar.error.
+          eliminar.mutateAsync(producto.id).then(
+            () => navegar({ nombre: 'productos' }),
+            () => undefined,
+          );
+        }}
+      >
+        {eliminar.isPending ? 'Eliminando…' : 'Eliminar producto'}
+      </Boton>
+    </div>
+  );
+}
+
 function Presentaciones({ producto, editable }: { producto: Producto; editable: boolean }) {
   // null: ningún formulario abierto; 'nueva' o el id de la que se edita.
   const [abierta, setAbierta] = useState<string | null>(null);
+  const eliminar = useEliminarPresentacion();
   const unidad = producto.unidad_base === 'UND' ? 'u' : unidadCorta(producto.unidad_base);
 
   return (
@@ -147,6 +179,7 @@ function Presentaciones({ producto, editable }: { producto: Producto; editable: 
       </div>
 
       {abierta === 'nueva' && <FormPresentacion producto={producto} alTerminar={() => setAbierta(null)} />}
+      <AvisoError error={eliminar.error} />
 
       <ul className="divide-y divide-gray-100">
         {presentacionesOrdenadas(producto).map((p) =>
@@ -173,6 +206,17 @@ function Presentaciones({ producto, editable }: { producto: Producto; editable: 
                 <Boton variante="secundario" onClick={() => setAbierta(p.id)} aria-label={`Editar ${p.nombre}`}>
                   Editar
                 </Boton>
+              )}
+              {editable && abierta === null && presentacionesOrdenadas(producto).length > 1 && (
+                <button
+                  type="button"
+                  aria-label={`Eliminar ${p.nombre}`}
+                  disabled={eliminar.isPending}
+                  onClick={() => window.confirm(`¿Eliminar la presentación ${p.nombre}?`) && eliminar.mutate(p.id)}
+                  className="flex size-11 items-center justify-center rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 className="size-5" aria-hidden />
+                </button>
               )}
             </li>
           ),
