@@ -9,7 +9,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(16);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000a001', 'dueno.a@prueba.test'),
@@ -104,6 +104,17 @@ select public.guardar_mi_negocio('{"nombre_comercial":"Bodega B Nueva"}');
 reset role;
 select is((select razon_social from public.empresas where id = 'aaaaaaaa-0000-0000-0000-000000000000'), 'ROSA PEREZ',
   'N16. Otra bodega no toca los datos de esta');
+
+-- Una bodega dada de alta antes de la regla, sin razón social: la migración no
+-- la bloquea y el Dueño la completa desde el panel.
+alter table public.empresas drop constraint empresas_razon_social_no_vacia;
+update public.empresas set razon_social = '' where id = 'aaaaaaaa-0000-0000-0000-000000000000';
+alter table public.empresas add constraint empresas_razon_social_no_vacia
+  check (length(trim(razon_social)) > 0) not valid;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001","role":"authenticated"}', true);
+select ok((public.guardar_mi_negocio('{"razon_social":"ROSA PEREZ","telefono":"0991112222"}') ->> 'ok')::boolean,
+  'N17. Una bodega sin razón social la completa desde el panel');
 
 select * from finish();
 rollback;

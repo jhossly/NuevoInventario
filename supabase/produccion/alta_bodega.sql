@@ -36,6 +36,9 @@ begin
   if v_ruc !~ '^[0-9]{13}$' then
     raise exception 'El RUC debe tener 13 dígitos: %', v_ruc;
   end if;
+  if trim(v_razon_social) = '' or v_razon_social = 'NOMBRES Y APELLIDOS' then
+    raise exception 'Escribe la razón social, como sale en el RUC';
+  end if;
   if exists (select 1 from public.empresas) then
     raise exception 'Ya hay una bodega registrada en esta base: el alta se hace una sola vez';
   end if;

@@ -15,7 +15,9 @@ alter table public.empresas
   add column direccion text,
   add column telefono  text,
   add column logo      text,
-  add constraint empresas_razon_social_no_vacia check (length(trim(razon_social)) > 0),
+  -- not valid: una bodega ya dada de alta sin razón social no impide migrar; se
+  -- exige al guardar, y la pantalla la pide.
+  add constraint empresas_razon_social_no_vacia check (length(trim(razon_social)) > 0) not valid,
   add constraint empresas_direccion_largo check (length(direccion) <= 300),
   add constraint empresas_telefono_largo check (length(telefono) <= 20),
   add constraint empresas_logo_valido check (
