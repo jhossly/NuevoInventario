@@ -9,7 +9,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(28);
+select plan(33);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000a001', 'dueno.a@prueba.test'),
@@ -92,6 +92,17 @@ select set_config('prueba.x2', pg_temp.factura(406,
   '[{"p":"ACE1","a":"7861001234567","d":"Aceite","c":"10","u":"2.00","t":"0"},
     {"p":"NUEVO","a":"Y","d":"Otro","c":"4","u":"1.00","t":"0"}]'), false);
 select set_config('prueba.x3', pg_temp.factura(407, '[{"p":"COLA3","a":"7861000000011","d":"Cola 3L caja 6","c":"1","u":"12.00","t":"0"}]'), false);
+
+-- Como las versión 2.1.0: líneas 3,00 + 4,00 = 7,00 y subtotal 7,01 (D-056).
+select set_config('prueba.x_centavo', replace(replace(pg_temp.factura(408,
+  '[{"p":"C1","a":"X","d":"Uno","c":"1","u":"3.00","t":"0"},{"p":"C2","a":"Y","d":"Dos","c":"1","u":"4.00","t":"0"}]'),
+  '<totalSinImpuestos>7.00<', '<totalSinImpuestos>7.01<'), '<importeTotal>7.00<', '<importeTotal>7.01<'), false);
+select set_config('prueba.x_lejos', replace(replace(pg_temp.factura(409,
+  '[{"p":"C1","a":"X","d":"Uno","c":"1","u":"3.00","t":"0"}]'),
+  '<totalSinImpuestos>3.00<', '<totalSinImpuestos>3.06<'), '<importeTotal>3.00<', '<importeTotal>3.06<'), false);
+select set_config('prueba.x_propia_centavo', replace(replace(pg_temp.factura(410,
+  '[{"p":"C1","a":"X","d":"Uno","c":"1","u":"3.00","t":"0"},{"p":"C2","a":"Y","d":"Dos","c":"1","u":"4.00","t":"0"}]', '0900000000001', '9999999999999'),
+  '<totalSinImpuestos>7.00<', '<totalSinImpuestos>7.01<'), '<importeTotal>7.00<', '<importeTotal>7.01<'), false);
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001","role":"authenticated"}', true);
@@ -210,6 +221,23 @@ reset role;
 select is((select count(*)::int from public.movimientos_inventario m join public.compras c on c.id = m.origen_id), 4,
   'M2. Cada línea recibida entra al kardex');
 set local role authenticated;
+
+-- Centavo de redondeo entre líneas y subtotal (D-056)
+select results_eq(
+  $$ select l ->> 'descripcion', l ->> 'base'
+       from jsonb_array_elements(public.leer_factura_proveedor(current_setting('prueba.x_centavo')) -> 'data' -> 'lineas') l
+      order by (l ->> 'orden')::int $$,
+  $$ values ('Uno'::text, '3.00'::text), ('Dos', '4.01') $$,
+  'K1. El centavo de diferencia va a la línea más grande');
+select is(public.registrar_compra_de_factura(current_setting('prueba.x_centavo'),
+    '[{"orden":1,"cantidad_recibida":"1","nuevo":{"nombre":"Uno"}},{"orden":2,"cantidad_recibida":"1","nuevo":{"nombre":"Dos"}}]',
+    gen_random_uuid()) -> 'data' ->> 'total', '7.01', 'K2. La compra cuadra con el total de la factura');
+select is(public.leer_factura_proveedor(current_setting('prueba.x_lejos')) -> 'error' ->> 'mensaje',
+  'Las líneas no suman la base de la factura', 'K3. Más de 5 centavos se sigue rechazando');
+select set_config('prueba.c_propia', public.importar_comprobante(current_setting('prueba.x_propia_centavo')) -> 'data' ->> 'comprobante_id', true);
+select isnt(nullif(current_setting('prueba.c_propia'), ''), null, 'K4. Una factura propia con el centavo también se importa');
+select is((select sum(base) from public.comprobante_lineas where comprobante_id = nullif(current_setting('prueba.c_propia'), '')::uuid),
+  7.01::numeric, 'K5. Sus líneas suman el subtotal');
 
 -- Anular y permisos
 select is(public.anular_compra((select id from public.compras order by creado_en limit 1), 'Prueba') ->> 'ok', 'true',
