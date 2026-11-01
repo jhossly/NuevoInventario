@@ -1,19 +1,32 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { Check, PackagePlus, PackageSearch, Upload } from 'lucide-react';
-import { useProductos } from '@/modules/catalogo/api';
+import { unidadCorta, useMedidas, useProductos } from '@/modules/catalogo/api';
 import { ElegirProducto } from '@/modules/catalogo/ElegirProducto';
 import { leerDecimal } from '@/shared/decimal';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { useLeerFactura, useRegistrarCompraXml, type FacturaProveedor, type LineaFactura, type LineaRevisada } from './api';
+
+// Kilos por cada medida de peso. Con otras medidas, «Cada una trae» va en esa medida.
+const KILOS: Record<string, number> = { KG: 1, LB: 0.453592 };
+const TEXTO_PESO: Record<string, string> = { KG: 'kg', LB: 'lb' };
+
+/** Unidades base que trae cada bulto: 5 lb en un producto por kilo = 2,26796. */
+function convertir(trae: number, medidaTrae: string, base: string): number {
+  const de = KILOS[medidaTrae];
+  const a = KILOS[base];
+  return de && a ? trae * (de / a) : trae;
+}
 
 interface Revision {
   modo: 'existente' | 'nuevo';
   productoId: string;
   productoNombre: string;
+  unidadBase: string;
+  medidaTrae: string;
   nombre: string;
   precio: string;
   controlaStock: boolean;
@@ -25,6 +38,8 @@ const inicial = (l: LineaFactura): Revision => ({
   modo: l.producto_id ? 'existente' : 'nuevo',
   productoId: l.producto_id ?? '',
   productoNombre: l.producto ?? '',
+  unidadBase: l.unidad_base ?? 'UND',
+  medidaTrae: l.unidad_base ?? 'UND',
   nombre: l.descripcion,
   precio: '',
   controlaStock: true,
@@ -70,8 +85,17 @@ export function ImportarCompra() {
   );
 }
 
+/** «Saco 10 kg» o «Caja 12»; sin nombre si es la presentación base. */
+function nombreBulto(l: Revision, trae: string): string | undefined {
+  const texto = TEXTO_PESO[l.medidaTrae];
+  if (Number(trae) === 1 && l.medidaTrae === l.unidadBase) return undefined;
+  const cantidad = trae.replace('.', ',');
+  return texto ? `Saco ${cantidad} ${texto}` : `Caja ${cantidad}`;
+}
+
 function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaProveedor; alCancelar: () => void }) {
   const productos = useProductos();
+  const medidas = useMedidas();
   const registrar = useRegistrarCompraXml();
   const unaVez = useUnSoloEnvio();
   const [clave] = useState(nuevaClave);
@@ -82,7 +106,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
     () =>
       (productos.data ?? [])
         .filter((p) => p.activo)
-        .map((p) => ({ id: p.id, texto: p.nombre }))
+        .map((p) => ({ id: p.id, texto: p.nombre, unidad: p.unidad_base }))
         .sort((a, b) => a.texto.localeCompare(b.texto)),
     [productos.data],
   );
@@ -107,9 +131,13 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
         salida.push({ orden: factura_l.orden, cantidad_recibida: '0' });
         continue;
       }
+      // 6 decimales: es lo que guarda el factor de una presentación.
+      const factor = convertir(Number(unidades.valor), l.medidaTrae, l.unidadBase).toFixed(6);
+      if (Number(factor) <= 0) return setError(`${nombreLinea}: revisa cuánto trae cada una`);
+      const presentacion = nombreBulto(l, unidades.valor);
       if (l.modo === 'existente') {
         if (!l.productoId) return setError(`${nombreLinea}: elige el producto`);
-        salida.push({ orden: factura_l.orden, cantidad_recibida: recibida.valor, factor: unidades.valor, producto_id: l.productoId });
+        salida.push({ orden: factura_l.orden, cantidad_recibida: recibida.valor, factor, presentacion, producto_id: l.productoId });
         continue;
       }
       if (l.nombre.trim() === '') return setError(`${nombreLinea}: escribe el nombre`);
@@ -118,8 +146,14 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
       salida.push({
         orden: factura_l.orden,
         cantidad_recibida: recibida.valor,
-        factor: unidades.valor,
-        nuevo: { nombre: l.nombre.trim(), precio_venta: precio?.ok ? precio.valor : '', controla_stock: l.controlaStock },
+        factor,
+        presentacion,
+        nuevo: {
+          nombre: l.nombre.trim(),
+          unidad_base: l.unidadBase,
+          precio_venta: precio?.ok ? precio.valor : '',
+          controla_stock: l.controlaStock,
+        },
       });
     }
     unaVez((terminar) =>
@@ -147,7 +181,8 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
           if (!x) return null;
           const recibida = Number(l.recibida.replace(',', '.'));
           const factor = Number(l.factor.replace(',', '.'));
-          const entran = recibida * factor;
+          const entran = recibida * convertir(factor, l.medidaTrae, l.unidadBase);
+          const esPeso = Boolean(KILOS[l.unidadBase]);
           return (
             <li key={x.orden} className="rounded-xl border border-gray-200 bg-white p-3">
               <p className="font-medium">{x.descripcion}</p>
@@ -182,7 +217,15 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
                     <ElegirProducto
                       opciones={opciones}
                       alElegir={(id) =>
-                        cambiar(i, { productoId: id, productoNombre: opciones.find((o) => o.id === id)?.texto ?? '' })
+                        {
+                          const elegido = opciones.find((o) => o.id === id);
+                          cambiar(i, {
+                            productoId: id,
+                            productoNombre: elegido?.texto ?? '',
+                            unidadBase: elegido?.unidad ?? 'UND',
+                            medidaTrae: elegido?.unidad ?? 'UND',
+                          });
+                        }
                       }
                     />
                   </>
@@ -190,8 +233,19 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
                   <div className="flex flex-col gap-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Campo etiqueta="Nombre del producto" value={l.nombre} onChange={(e) => cambiar(i, { nombre: e.target.value })} />
+                      <Selector
+                        etiqueta="Se cuenta en"
+                        value={l.unidadBase}
+                        onChange={(e) => cambiar(i, { unidadBase: e.target.value, medidaTrae: e.target.value })}
+                      >
+                        {medidas.data?.map((m) => (
+                          <option key={m.codigo} value={m.codigo}>
+                            {m.nombre}
+                          </option>
+                        ))}
+                      </Selector>
                       <Campo
-                        etiqueta="Precio de venta por unidad"
+                        etiqueta={`Precio de venta por ${medidas.data?.find((m) => m.codigo === l.unidadBase)?.nombre.toLowerCase() ?? 'unidad'}`}
                         ayuda="Puedes ponerlo después"
                         inputMode="decimal"
                         value={l.precio}
@@ -215,16 +269,34 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
                   value={l.recibida}
                   onChange={(e) => cambiar(i, { recibida: e.target.value })}
                 />
-                <Campo
-                  etiqueta="Unidades por cada una"
-                  ayuda="Caja de 12 = 12"
-                  inputMode="decimal"
-                  value={l.factor}
-                  onChange={(e) => cambiar(i, { factor: e.target.value })}
-                />
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Campo
+                      etiqueta="Cada una trae"
+                      ayuda={esPeso ? 'Saco de 10 kg = 10' : 'Caja de 12 = 12'}
+                      inputMode="decimal"
+                      value={l.factor}
+                      onChange={(e) => cambiar(i, { factor: e.target.value })}
+                    />
+                  </div>
+                  {esPeso && (
+                    <div className="w-20 pb-6">
+                      <Selector
+                        etiqueta="En"
+                        value={l.medidaTrae}
+                        onChange={(e) => cambiar(i, { medidaTrae: e.target.value })}
+                      >
+                        <option value="KG">kg</option>
+                        <option value="LB">lb</option>
+                      </Selector>
+                    </div>
+                  )}
+                </div>
               </div>
               {recibida > 0 && factor > 0 && (
-                <p className="mt-2 text-sm font-medium">Entran {formatearCantidad(String(entran))} unidades al stock</p>
+                <p className="mt-2 text-sm font-medium">
+                  Entran {formatearCantidad(entran.toFixed(3))} {unidadCorta(l.unidadBase)} al stock
+                </p>
               )}
               {recibida !== Number(x.cantidad) && (
                 <p className="text-sm text-amber-800">No coincide con la factura ({formatearCantidad(x.cantidad)})</p>

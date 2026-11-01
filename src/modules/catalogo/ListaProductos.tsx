@@ -4,9 +4,17 @@ import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ClipboardCheck, Plus } from 'lucide-react';
-import { AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { FotoProducto } from './FotoProducto';
-import { unidadCorta, bajoStock, presentacionBase, stockDe, useProductos } from './api';
+import {
+  bajoStock,
+  presentacionBase,
+  stockDe,
+  unidadCorta,
+  useCategorias,
+  useProductos,
+  useProveedoresDeProductos,
+} from './api';
 
 /** Compara sin tildes ni mayúsculas: "azucar" encuentra "Azúcar". */
 function normalizar(texto: string): string {
@@ -18,10 +26,14 @@ export function ListaProductos() {
   const esDueno = contexto.rol === 'DUENO';
   const productos = useProductos();
   const valorizado = useValorizado(contexto.ve_costos);
+  const categorias = useCategorias();
+  const proveedores = useProveedoresDeProductos(esDueno);
 
   const [busqueda, setBusqueda] = useState('');
   const [soloBajos, setSoloBajos] = useState(false);
   const [verInactivos, setVerInactivos] = useState(false);
+  const [categoria, setCategoria] = useState('');
+  const [proveedor, setProveedor] = useState('');
 
   const costos = useMemo(
     () => new Map(valorizado.data?.productos.map((p) => [p.producto_id, p]) ?? []),
@@ -30,16 +42,19 @@ export function ListaProductos() {
 
   const visibles = useMemo(() => {
     const texto = normalizar(busqueda.trim());
+    const delProveedor = proveedor ? new Set(proveedores.data?.find((v) => v.id === proveedor)?.productos) : null;
     return (productos.data ?? []).filter(
       (p) =>
         (verInactivos || p.activo) &&
         (!soloBajos || bajoStock(p)) &&
+        (categoria === '' || (categoria === 'ninguna' ? p.categoria_id === null : p.categoria_id === categoria)) &&
+        (!delProveedor || delProveedor.has(p.id)) &&
         (texto === '' ||
           normalizar(p.nombre).includes(texto) ||
           [p.codigo_principal, p.codigo_auxiliar].some((c) => c !== null && normalizar(c) === texto) ||
           p.presentaciones.some((r) => r.codigo_barras === busqueda.trim())),
     );
-  }, [productos.data, busqueda, soloBajos, verInactivos]);
+  }, [productos.data, proveedores.data, busqueda, soloBajos, verInactivos, categoria, proveedor]);
 
   const cuantosBajos = (productos.data ?? []).filter(bajoStock).length;
 
@@ -73,6 +88,27 @@ export function ListaProductos() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Selector etiqueta="Categoría" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+            <option value="">Todas</option>
+            <option value="ninguna">Sin categoría</option>
+            {categorias.data?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </Selector>
+          {esDueno && (
+            <Selector etiqueta="Proveedor" value={proveedor} onChange={(e) => setProveedor(e.target.value)}>
+              <option value="">Todos</option>
+              {proveedores.data?.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nombre}
+                </option>
+              ))}
+            </Selector>
+          )}
+        </div>
         <div className="flex flex-wrap gap-x-6">
           <Casilla
             etiqueta={`Solo bajo stock (${cuantosBajos})`}
@@ -95,7 +131,7 @@ export function ListaProductos() {
               ? esDueno
                 ? 'Todavía no hay productos. Crea el primero con «Nuevo».'
                 : 'Todavía no hay productos.'
-              : 'Ningún producto coincide con la búsqueda.'}
+              : 'Ningún producto coincide con la búsqueda o los filtros.'}
           </p>
         </Tarjeta>
       )}

@@ -256,6 +256,7 @@ const esquemaLineaFactura = z.object({
   producto_id: uuid.nullable(),
   producto: z.string().nullable(),
   factor: decimal.nullable(),
+  unidad_base: z.string().nullable(),
 });
 
 export const esquemaFacturaProveedor = z.object({
@@ -275,7 +276,8 @@ export interface LineaRevisada {
   cantidad_recibida: string;
   factor?: string;
   producto_id?: string;
-  nuevo?: { nombre: string; precio_venta: string; controla_stock: boolean };
+  presentacion?: string;
+  nuevo?: { nombre: string; unidad_base: string; precio_venta: string; controla_stock: boolean };
 }
 
 export function useLeerFactura() {

@@ -138,6 +138,17 @@ export function useProducto(id: string) {
   return { ...productos, data: productos.data?.find((p) => p.id === id) };
 }
 
+const esquemaProveedoresDeProductos = z.array(z.object({ id: uuid, nombre: z.string(), productos: z.array(uuid) }));
+
+/** Qué le compró la bodega a cada proveedor. Solo el Dueño ve las compras. */
+export function useProveedoresDeProductos(habilitado: boolean) {
+  return useQuery({
+    queryKey: ['productos', 'proveedores'],
+    queryFn: () => llamar('proveedores_de_productos', {}, esquemaProveedoresDeProductos),
+    enabled: habilitado,
+  });
+}
+
 export function useCategorias() {
   return useQuery({
     queryKey: claves.categorias,
