@@ -1,13 +1,14 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { useProductos } from '@/modules/catalogo/api';
+import { ElegirProducto } from '@/modules/catalogo/ElegirProducto';
 import { useContexto } from '@/modules/sesion/sesion';
 import { formatearMomento } from '@/modules/ventas/api';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { FilePlus2, Layers, Link2, PackagePlus, Trash2, Upload } from 'lucide-react';
-import { Aviso, AvisoError, Boton, Buscador, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
 import {
   presentacionBaseDe,
   useAsociarLinea,
@@ -199,50 +200,6 @@ function CrearTodos({ lineas, alCrear }: { lineas: string[]; alCrear: (mensaje: 
       </p>
       <BotonLote lineas={lineas} texto={`Crear todos (${lineas.length})`} alCrear={alCrear} />
     </Tarjeta>
-  );
-}
-
-/** Lista con búsqueda para elegir un producto: un selector no sirve con cientos. */
-function ElegirProducto({
-  opciones,
-  disabled,
-  alElegir,
-}: {
-  opciones: { id: string; texto: string }[];
-  disabled: boolean;
-  alElegir: (id: string) => void;
-}) {
-  const [busqueda, setBusqueda] = useState('');
-  const texto = busqueda.trim().toLowerCase();
-  const encontradas = texto === '' ? [] : opciones.filter((o) => o.texto.toLowerCase().includes(texto)).slice(0, 8);
-  return (
-    <div className="relative">
-      <Buscador
-        etiqueta="Buscar el producto"
-        value={busqueda}
-        disabled={disabled}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
-      {texto !== '' && (
-        <ul className="absolute z-10 mt-1 w-full divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-lg">
-          {encontradas.map((o) => (
-            <li key={o.id}>
-              <button
-                type="button"
-                className="flex min-h-11 w-full items-center px-3 text-left hover:bg-gray-50"
-                onClick={() => {
-                  setBusqueda('');
-                  alElegir(o.id);
-                }}
-              >
-                {o.texto}
-              </button>
-            </li>
-          ))}
-          {encontradas.length === 0 && <li className="p-3 text-gray-500">Ningún producto coincide.</li>}
-        </ul>
-      )}
-    </div>
   );
 }
 

@@ -49,6 +49,8 @@ export const esquemaCompra = esquemaResumenCompra.extend({
   descuento: decimal,
   iva: decimal,
   iva_es_costo: z.boolean(),
+  otros_impuestos: decimal,
+  total_factura: decimal.nullable(),
   motivo_anulacion: z.string().nullable(),
   compra_detalles: z.array(esquemaDetalle),
 });
@@ -123,6 +125,7 @@ export function useCompras() {
 const COLUMNAS_COMPRA = [
   'id,fecha,numero_documento,con_respaldo,estado,motivo_anulacion,iva_es_costo',
   'subtotal:subtotal::text,descuento:descuento::text,iva:iva::text,total:total::text',
+  'otros_impuestos:otros_impuestos::text,total_factura:total_factura::text',
   'proveedores(nombre)',
   'compra_detalles(orden,cantidad:cantidad::text,costo_unitario:costo_unitario::text,' +
     'descuento:descuento::text,tarifa_iva:tarifa_iva::text,subtotal:subtotal::text,iva:iva::text,' +
@@ -234,4 +237,62 @@ export function useAnularCompra() {
 const formatoFecha = new Intl.DateTimeFormat('es-EC', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 export function formatearFecha(fecha: string): string {
   return formatoFecha.format(new Date(`${fecha}T00:00:00Z`));
+}
+
+// -----------------------------------------------------------------------------
+// Compra desde el XML del proveedor (D-054)
+// -----------------------------------------------------------------------------
+const esquemaLineaFactura = z.object({
+  orden: z.number(),
+  codigo: z.string().nullable(),
+  descripcion: z.string(),
+  cantidad: decimal,
+  precio_unitario: decimal,
+  descuento: decimal,
+  base: decimal,
+  tarifa_iva: decimal,
+  iva: decimal,
+  otros_impuestos: decimal,
+  producto_id: uuid.nullable(),
+  producto: z.string().nullable(),
+  factor: decimal.nullable(),
+});
+
+export const esquemaFacturaProveedor = z.object({
+  numero: z.string(),
+  fecha: z.string(),
+  ruc: z.string(),
+  razon_social: z.string(),
+  total: decimal,
+  proveedor_id: uuid.nullable(),
+  lineas: z.array(esquemaLineaFactura),
+});
+export type FacturaProveedor = z.infer<typeof esquemaFacturaProveedor>;
+export type LineaFactura = z.infer<typeof esquemaLineaFactura>;
+
+export interface LineaRevisada {
+  orden: number;
+  cantidad_recibida: string;
+  factor?: string;
+  producto_id?: string;
+  nuevo?: { nombre: string; precio_venta: string; controla_stock: boolean };
+}
+
+export function useLeerFactura() {
+  return useMutation({
+    mutationFn: (xml: string) => llamar('leer_factura_proveedor', { p_xml: xml }, esquemaFacturaProveedor),
+  });
+}
+
+export function useRegistrarCompraXml() {
+  const invalidar = useInvalidarTrasCompra();
+  return useMutation({
+    mutationFn: (d: { xml: string; lineas: LineaRevisada[]; clave: string }) =>
+      llamar(
+        'registrar_compra_de_factura',
+        { p_xml: d.xml, p_lineas: d.lineas, p_clave_idempotencia: d.clave },
+        z.object({ compra_id: uuid, repetido: z.boolean(), total: decimal }),
+      ),
+    onSuccess: invalidar,
+  });
 }

@@ -57,7 +57,7 @@ const GRUPOS: { titulo: string; secciones: Seccion[] }[] = [
         titulo: 'Compras',
         icono: Truck,
         ruta: { nombre: 'compras' },
-        incluye: ['compras', 'compra-nueva', 'compra'],
+        incluye: ['compras', 'compra-nueva', 'compra-factura', 'compra'],
         soloDueno: true,
       },
       { titulo: 'Proveedores', icono: Warehouse, ruta: { nombre: 'proveedores' }, incluye: ['proveedores'], soloDueno: true },

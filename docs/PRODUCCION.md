@@ -108,12 +108,13 @@ Desde la computadora y desde el celular, abre la dirección de Vercel:
 ## 8. Cargar los datos reales
 
 1. **IVA de ventas:** Reportes → «IVA de ventas» → la fecha y el modo que confirmó el contador.
-2. **Catálogo:**
+2. **Mercadería:** en Compras → **Desde factura XML**, sube la factura del proveedor, revisa cada línea (producto, lo que llegó y unidades por caja) y guarda. Crea el proveedor, los productos nuevos y suma el stock.
+3. **Catálogo:**
    - Rápido: Ventas → «Facturas SRI» → sube tus XML de facturas emitidas y usa **«Crear producto»** en cada línea sin producto.
    - A mano: Productos → «Nuevo» para lo que no aparece en facturas. Marca «Controla stock» solo en lo que se cuenta; desmárcalo en recargas y servicios.
-3. **Stock inicial:** en cada producto, «Ajustar stock» → **Apertura** con la cantidad y lo que costó cada unidad. Mejor un día de poco movimiento, contando de verdad.
-4. **Clientes con fiado:** Ventas → Clientes, con su límite. Si ya deben, regístralo como ajuste en Fiado.
-5. **Caja:** cada día, abrir con el fondo y cerrar contando.
+4. **Stock inicial:** en cada producto, «Ajustar stock» → **Apertura** con la cantidad y lo que costó cada unidad. Mejor un día de poco movimiento, contando de verdad.
+5. **Clientes con fiado:** Ventas → Clientes, con su límite. Si ya deben, regístralo como ajuste en Fiado.
+6. **Caja:** cada día, abrir con el fondo y cerrar contando.
 
 **Durante 1 o 2 semanas usa el sistema junto con tu Excel** y compara el stock y las ventas. Cuando cuadren, deja el Excel.
 

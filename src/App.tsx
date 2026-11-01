@@ -1,6 +1,7 @@
 import { FichaProducto } from '@/modules/catalogo/FichaProducto';
 import { DetalleCompra } from '@/modules/compras/DetalleCompra';
 import { ListaCompras } from '@/modules/compras/ListaCompras';
+import { ImportarCompra } from '@/modules/compras/ImportarCompra';
 import { NuevaCompra } from '@/modules/compras/NuevaCompra';
 import { Proveedores } from '@/modules/compras/Proveedores';
 import { Caja } from '@/modules/caja/Caja';
@@ -94,6 +95,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<ListaCompras />);
     case 'compra-nueva':
       return soloDueno(<NuevaCompra />);
+    case 'compra-factura':
+      return soloDueno(<ImportarCompra />);
     case 'compra':
       return soloDueno(<DetalleCompra id={ruta.id} />);
     case 'proveedores':

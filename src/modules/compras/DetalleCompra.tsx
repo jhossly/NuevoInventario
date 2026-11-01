@@ -82,9 +82,20 @@ function Detalle({ compra, volver }: { compra: Compra; volver: string }) {
           )}
           <dt className="text-gray-600">IVA</dt>
           <dd className="text-right">{formatearDinero(compra.iva)}</dd>
+          {Number(compra.otros_impuestos) > 0 && (
+            <>
+              <dt className="text-gray-600">ICE y otros impuestos</dt>
+              <dd className="text-right">{formatearDinero(compra.otros_impuestos)}</dd>
+            </>
+          )}
           <dt className="font-semibold">Total</dt>
           <dd className={`text-right font-semibold ${anulada ? 'line-through' : ''}`}>{formatearDinero(compra.total)}</dd>
         </dl>
+        {compra.total_factura && Number(compra.total_factura) !== Number(compra.total) && (
+          <p className="mt-2 text-sm text-amber-800">
+            La factura decía {formatearDinero(compra.total_factura)}: se registró solo lo que llegó.
+          </p>
+        )}
       </Tarjeta>
 
       {!anulada && <Anular id={compra.id} />}
