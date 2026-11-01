@@ -13,18 +13,21 @@ import { ListaVentas } from '@/modules/ventas/ListaVentas';
 import { PuntoVenta } from '@/modules/ventas/PuntoVenta';
 import { IvaVentas } from '@/modules/ventas/IvaVentas';
 import { MiNegocio } from '@/modules/negocio/MiNegocio';
+import { Medidas } from '@/modules/catalogo/Medidas';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
 import { PantallaAjuste } from '@/modules/inventario/FormAjuste';
 import { Kardex } from '@/modules/inventario/Kardex';
 import { PantallaIngreso } from '@/modules/sesion/PantallaIngreso';
-import { cerrarSesion, useSesion, type Contexto } from '@/modules/sesion/sesion';
+import { cerrarSesion, useSesion } from '@/modules/sesion/sesion';
 import { enlace, useRuta, type Ruta } from '@/shared/ruta';
+import { Marco } from '@/shared/Marco';
 import { Aviso, Boton, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
 
 export function App() {
   const sesion = useSesion();
+  const ruta = useRuta();
 
   switch (sesion.estado) {
     case 'cargando':
@@ -52,69 +55,12 @@ export function App() {
         </main>
       );
     case 'lista':
-      return <Marco contexto={sesion.contexto} correo={sesion.correo} />;
+      return (
+        <Marco contexto={sesion.contexto} correo={sesion.correo} ruta={ruta}>
+          <Pantalla ruta={ruta} esDueno={sesion.contexto.rol === 'DUENO'} />
+        </Marco>
+      );
   }
-}
-
-const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDueno?: boolean }[] = [
-  { titulo: 'Vender', ruta: { nombre: 'vender' }, incluye: ['vender'] },
-  { titulo: 'Ventas', ruta: { nombre: 'ventas' }, incluye: ['ventas', 'venta', 'clientes', 'comprobantes'] },
-  { titulo: 'Caja', ruta: { nombre: 'caja' }, incluye: ['caja'] },
-  { titulo: 'Fiado', ruta: { nombre: 'fiado' }, incluye: ['fiado'] },
-  {
-    titulo: 'Productos',
-    ruta: { nombre: 'productos' },
-    incluye: ['productos', 'producto-nuevo', 'producto', 'ajuste', 'kardex', 'conteo'],
-  },
-  {
-    titulo: 'Compras',
-    ruta: { nombre: 'compras' },
-    incluye: ['compras', 'compra-nueva', 'compra', 'proveedores'],
-    soloDueno: true,
-  },
-  { titulo: 'Reportes', ruta: { nombre: 'reportes' }, incluye: ['reportes', 'iva-ventas'], soloDueno: true },
-  { titulo: 'Mi negocio', ruta: { nombre: 'mi-negocio' }, incluye: ['mi-negocio'], soloDueno: true },
-];
-
-function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
-  const ruta = useRuta();
-  const esDueno = contexto.rol === 'DUENO';
-  return (
-    <div className="min-h-dvh">
-      <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
-          <a href={enlace({ nombre: 'vender' })} className="flex max-w-48 shrink-0 items-center gap-2" aria-label={contexto.nombre}>
-            {contexto.logo && <img src={contexto.logo} alt="" className="size-8 rounded object-contain" />}
-            <span className="hidden truncate font-semibold sm:block">
-              {contexto.nombre}
-            </span>
-          </a>
-          {/* En el celular las secciones no caben: se desplazan de lado. */}
-          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-            {SECCIONES.filter((s) => esDueno || !s.soloDueno).map((s) => (
-              <a
-                key={s.titulo}
-                href={enlace(s.ruta)}
-                aria-current={s.incluye.includes(ruta.nombre) ? 'page' : undefined}
-                className="whitespace-nowrap rounded-lg px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900"
-              >
-                {s.titulo}
-              </a>
-            ))}
-          </div>
-          <span className="hidden shrink-0 text-sm text-gray-500 lg:inline">
-            {correo} · {contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}
-          </span>
-          <Boton variante="secundario" onClick={() => void cerrarSesion()}>
-            Salir
-          </Boton>
-        </div>
-      </nav>
-      <main className="mx-auto max-w-5xl p-4">
-        <Pantalla ruta={ruta} esDueno={esDueno} />
-      </main>
-    </div>
-  );
 }
 
 function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
@@ -171,6 +117,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<IvaVentas />);
     case 'mi-negocio':
       return soloDueno(<MiNegocio />);
+    case 'medidas':
+      return soloDueno(<Medidas />);
     case 'no-encontrada':
       return (
         <Tarjeta>

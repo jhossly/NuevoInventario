@@ -1,3 +1,4 @@
+import { Store } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +27,12 @@ export function PantallaIngreso() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-4">
-      <h1 className="text-2xl font-semibold">Bodega</h1>
+      <div className="flex items-center gap-3">
+        <span className="flex size-12 items-center justify-center rounded-xl bg-emerald-700 text-white">
+          <Store className="size-7" aria-hidden />
+        </span>
+        <h1 className="text-2xl font-bold">Bodega</h1>
+      </div>
       <form onSubmit={enviar} className="flex flex-col gap-4">
         <Campo
           etiqueta="Correo"

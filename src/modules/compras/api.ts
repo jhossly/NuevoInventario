@@ -41,7 +41,7 @@ const esquemaDetalle = z.object({
   cantidad_base: decimal,
   costo_unitario_base: decimal,
   presentaciones: z.object({ nombre: z.string() }),
-  productos: z.object({ nombre: z.string(), unidad_base: z.enum(['UND', 'KG']) }),
+  productos: z.object({ nombre: z.string(), unidad_base: z.string() }),
 });
 
 export const esquemaCompra = esquemaResumenCompra.extend({

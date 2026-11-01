@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { consultar, llamar } from '@/lib/datos';
 import { decimal, uuid } from '@/shared/esquemas';
+import { reducirImagen } from '@/shared/imagen';
 
 export const esquemaNegocio = z.object({
   id: uuid,
@@ -65,20 +66,9 @@ export function useGuardarNegocio() {
 const LADO_LOGO = 256;
 const LARGO_MAXIMO = 200_000;
 
-/**
- * Reduce la imagen en el navegador y la devuelve como data URL. Lo guardado
- * es un archivo nuevo dibujado en un canvas, no el que subió la persona.
- */
+/** Reduce la imagen y la devuelve como data URL, que es como se guarda el logo. */
 export async function reducirLogo(archivo: File): Promise<string> {
-  const imagen = await createImageBitmap(archivo);
-  const escala = Math.min(1, LADO_LOGO / Math.max(imagen.width, imagen.height));
-  const lienzo = document.createElement('canvas');
-  lienzo.width = Math.max(1, Math.round(imagen.width * escala));
-  lienzo.height = Math.max(1, Math.round(imagen.height * escala));
-  const dibujo = lienzo.getContext('2d');
-  if (!dibujo) throw new Error('Este navegador no puede procesar la imagen');
-  dibujo.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
-  imagen.close();
+  const lienzo = await reducirImagen(archivo, LADO_LOGO);
   const resultado = lienzo.toDataURL('image/webp', 0.85);
   if (resultado.length > LARGO_MAXIMO) throw new Error('La imagen es demasiado pesada');
   return resultado;

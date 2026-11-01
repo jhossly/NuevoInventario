@@ -1,6 +1,7 @@
+import { Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { enlace } from '@/shared/ruta';
-import { AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { AvisoError, Boton, Buscador, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import {
   TIPOS_IDENTIFICACION,
   useGuardarProveedor,
@@ -16,6 +17,11 @@ export function Proveedores() {
   const proveedores = useProveedores();
   // null: ningún formulario; 'nuevo' o el id del que se edita.
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const texto = busqueda.trim().toLowerCase();
+  const visibles = (proveedores.data ?? []).filter(
+    (p) => p.nombre.toLowerCase().includes(texto) || (p.identificacion ?? '').includes(texto),
+  );
 
   return (
     <>
@@ -24,7 +30,9 @@ export function Proveedores() {
         volver={enlace({ nombre: 'compras' })}
         acciones={
           abierto === null && (
-            <Boton onClick={() => setAbierto('nuevo')}>Nuevo</Boton>
+            <Boton icono={Plus} onClick={() => setAbierto('nuevo')}>
+              Nuevo
+            </Boton>
           )
         }
       />
@@ -33,13 +41,19 @@ export function Proveedores() {
           <FormProveedor alTerminar={() => setAbierto(null)} />
         </Tarjeta>
       )}
+      <Buscador
+        etiqueta="Buscar por nombre o identificación"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="mb-3"
+      />
       {proveedores.isPending && <Cargando />}
       <AvisoError error={proveedores.error} />
       {proveedores.isSuccess && proveedores.data.length === 0 && abierto === null && (
         <Tarjeta>Todavía no hay proveedores.</Tarjeta>
       )}
       <ul className="flex flex-col gap-2">
-        {proveedores.data?.map((p) => (
+        {visibles.map((p) => (
           <li key={p.id} className={`rounded-xl border border-gray-200 bg-white p-3 ${p.activo ? '' : 'opacity-60'}`}>
             {abierto === p.id ? (
               <FormProveedor proveedor={p} alTerminar={() => setAbierto(null)} />

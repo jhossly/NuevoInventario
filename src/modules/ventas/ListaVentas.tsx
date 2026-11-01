@@ -2,16 +2,20 @@ import { useState } from 'react';
 import { useContexto } from '@/modules/sesion/sesion';
 import { formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { AvisoError, Cargando, Casilla, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { COMPROBANTES, formatearMomento, useVentas } from './api';
 
 export function ListaVentas() {
   const esDueno = useContexto().rol === 'DUENO';
   const ventas = useVentas();
   const [soloSolicitudes, setSoloSolicitudes] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const texto = busqueda.trim().toLowerCase();
 
   const visibles = (ventas.data ?? []).filter(
-    (v) => !soloSolicitudes || (v.estado === 'CONFIRMADA' && v.solicitud_anulacion !== null),
+    (v) =>
+      (!soloSolicitudes || (v.estado === 'CONFIRMADA' && v.solicitud_anulacion !== null)) &&
+      (texto === '' || (v.clientes?.nombre ?? 'consumidor final').toLowerCase().includes(texto) || v.fecha.includes(texto)),
   );
   const solicitudes = (ventas.data ?? []).filter((v) => v.estado === 'CONFIRMADA' && v.solicitud_anulacion !== null).length;
 
@@ -36,6 +40,12 @@ export function ListaVentas() {
           onChange={(e) => setSoloSolicitudes(e.target.checked)}
         />
       )}
+      <Buscador
+        etiqueta="Buscar por cliente o fecha"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="mb-3"
+      />
       {ventas.isPending && <Cargando />}
       <AvisoError error={ventas.error} />
       {ventas.isSuccess && visibles.length === 0 && <Tarjeta>No hay ventas para mostrar.</Tarjeta>}

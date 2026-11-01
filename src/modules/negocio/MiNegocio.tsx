@@ -102,7 +102,7 @@ function Formulario({ negocio }: { negocio: Negocio }) {
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-gray-900 px-4 font-medium text-white hover:bg-gray-700">
+              <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
                 {logo ? 'Cambiar logo' : 'Subir logo'}
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={elegirLogo} />
               </label>

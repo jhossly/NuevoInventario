@@ -1,4 +1,5 @@
-import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { forwardRef, useId, type ButtonHTMLAttributes, type ComponentType, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { ArrowLeft, Search, type LucideProps } from 'lucide-react';
 
 /**
  * Piezas visuales comunes. Pensadas primero para el celular del Dueño:
@@ -6,43 +7,74 @@ import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactN
  */
 
 const estilosBoton = {
-  primario: 'bg-gray-900 text-white hover:bg-gray-700 disabled:bg-gray-400',
-  secundario: 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 disabled:text-gray-400',
+  primario: 'bg-emerald-700 text-white hover:bg-emerald-800 disabled:bg-gray-400',
+  secundario: 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 disabled:text-gray-400',
   peligro: 'bg-red-700 text-white hover:bg-red-600 disabled:bg-red-300',
 } as const;
 
+export type Icono = ComponentType<LucideProps>;
+
 export function Boton({
   variante = 'primario',
+  icono: IconoBoton,
+  children,
   className = '',
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variante?: keyof typeof estilosBoton }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variante?: keyof typeof estilosBoton; icono?: Icono }) {
   return (
     <button
       type="button"
-      className={`min-h-11 rounded-lg px-4 text-base font-medium ${estilosBoton[variante]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-base font-medium ${estilosBoton[variante]} ${className}`}
       {...props}
-    />
+    >
+      {IconoBoton && <IconoBoton className="size-5 shrink-0" aria-hidden />}
+      {children}
+    </button>
   );
 }
 
 export function EnlaceBoton({
   href,
   children,
+  icono: IconoBoton,
   variante = 'secundario',
 }: {
   href: string;
   children: ReactNode;
+  icono?: Icono;
   variante?: keyof typeof estilosBoton;
 }) {
   return (
     <a
       href={href}
-      className={`inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-base font-medium ${estilosBoton[variante]}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-base font-medium ${estilosBoton[variante]}`}
     >
+      {IconoBoton && <IconoBoton className="size-5 shrink-0" aria-hidden />}
       {children}
     </a>
   );
 }
+
+/** Barra de búsqueda con su lupa, igual en todas las pantallas. */
+export const Buscador = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { etiqueta: string }>(function Buscador(
+  { etiqueta, className = '', ...props },
+  ref,
+) {
+  return (
+    <div className={`relative ${className}`}>
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
+      <input
+        ref={ref}
+        type="search"
+        inputMode="search"
+        aria-label={etiqueta}
+        placeholder={etiqueta}
+        className="min-h-12 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-base"
+        {...props}
+      />
+    </div>
+  );
+});
 
 export function Campo({
   etiqueta,
@@ -135,11 +167,11 @@ export function Encabezado({ titulo, volver, acciones }: { titulo: string; volve
   return (
     <header className="mb-4 flex flex-wrap items-center gap-3">
       {volver && (
-        <a href={volver} className="-ml-2 rounded-lg px-2 py-2 text-gray-600 hover:bg-gray-100" aria-label="Volver">
-          ←
+        <a href={volver} className="-ml-2 rounded-lg p-2 text-gray-600 hover:bg-gray-100" aria-label="Volver">
+          <ArrowLeft className="size-6" aria-hidden />
         </a>
       )}
-      <h1 className="flex-1 text-xl font-semibold">{titulo}</h1>
+      <h1 className="flex-1 text-2xl font-bold">{titulo}</h1>
       {acciones}
     </header>
   );

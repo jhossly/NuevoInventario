@@ -1,9 +1,10 @@
+import { Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useContexto } from '@/modules/sesion/sesion';
 import { leerDecimal, paraEditar } from '@/shared/decimal';
 import { formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { Buscador, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { useClientes, useGuardarCliente, type Cliente, type DatosCliente } from './api';
 
 type TipoId = 'RUC' | 'CEDULA' | 'PASAPORTE' | '';
@@ -23,20 +24,24 @@ export function Clientes() {
       <Encabezado
         titulo="Clientes"
         volver={enlace({ nombre: 'ventas' })}
-        acciones={abierto === null && <Boton onClick={() => setAbierto('nuevo')}>Nuevo</Boton>}
+        acciones={
+          abierto === null && (
+            <Boton icono={Plus} onClick={() => setAbierto('nuevo')}>
+              Nuevo
+            </Boton>
+          )
+        }
       />
       {abierto === 'nuevo' && (
         <Tarjeta className="mb-4">
           <FormCliente alTerminar={() => setAbierto(null)} />
         </Tarjeta>
       )}
-      <input
-        type="search"
-        placeholder="Buscar por nombre o identificación"
-        aria-label="Buscar cliente"
+      <Buscador
+        etiqueta="Buscar por nombre o identificación"
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
-        className="mb-3 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-base"
+        className="mb-3"
       />
       {clientes.isPending && <Cargando />}
       <AvisoError error={clientes.error} />

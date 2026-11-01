@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { UNIDADES, stockDe, useProducto, type Producto } from '@/modules/catalogo/api';
+import { unidadCorta, stockDe, useProducto, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal, negar } from '@/shared/decimal';
 import { formatearCantidad } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
@@ -27,7 +27,7 @@ const AYUDA: Record<TipoAjuste, string> = {
 function FormAjuste({ producto }: { producto: Producto }) {
   const ajustar = useAjustar();
   const unaVez = useUnSoloEnvio();
-  const unidad = UNIDADES[producto.unidad_base];
+  const unidad = unidadCorta(producto.unidad_base);
   const sinStock = Number(stockDe(producto)) === 0;
 
   const [tipo, setTipo] = useState<TipoAjuste>(sinStock ? 'APERTURA' : 'AJUSTE');

@@ -25,7 +25,7 @@ export const esquemaMargen = z.object({
     z.object({
       producto_id: uuid,
       nombre: z.string(),
-      unidad_base: z.enum(['UND', 'KG']),
+      unidad_base: z.string(),
       cantidad: decimal,
       ventas: decimal,
       costo: decimal,

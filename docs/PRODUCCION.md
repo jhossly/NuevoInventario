@@ -130,6 +130,8 @@ Desde la computadora y desde el celular, abre la dirección de Vercel:
 
   La carpeta `respaldos/` está en `.gitignore`: Git no la sube. Copia el archivo también fuera de la computadora (Google Drive, USB). **Nunca lo subas a GitHub**: tiene tus ventas y clientes.
 
+  Este respaldo **no incluye las fotos de los productos** (están en Storage): si se pierden, hay que volver a subirlas.
+
 ## Si algo pasa
 
 - **Olvidaron una contraseña:** Authentication → Users → el usuario → cambiarle la contraseña.

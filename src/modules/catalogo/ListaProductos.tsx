@@ -3,8 +3,10 @@ import { useContexto } from '@/modules/sesion/sesion';
 import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { AvisoError, Cargando, Casilla, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
-import { UNIDADES, bajoStock, presentacionBase, stockDe, useProductos } from './api';
+import { ClipboardCheck, Plus } from 'lucide-react';
+import { AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { FotoProducto } from './FotoProducto';
+import { unidadCorta, bajoStock, presentacionBase, stockDe, useProductos } from './api';
 
 /** Compara sin tildes ni mayúsculas: "azucar" encuentra "Azúcar". */
 function normalizar(texto: string): string {
@@ -48,8 +50,10 @@ export function ListaProductos() {
         acciones={
           esDueno && (
             <>
-              <EnlaceBoton href={enlace({ nombre: 'conteo' })}>Conteo</EnlaceBoton>
-              <EnlaceBoton href={enlace({ nombre: 'producto-nuevo' })} variante="primario">
+              <EnlaceBoton href={enlace({ nombre: 'conteo' })} icono={ClipboardCheck}>
+                Conteo
+              </EnlaceBoton>
+              <EnlaceBoton href={enlace({ nombre: 'producto-nuevo' })} variante="primario" icono={Plus}>
                 Nuevo
               </EnlaceBoton>
             </>
@@ -64,14 +68,10 @@ export function ListaProductos() {
       )}
 
       <div className="mb-4 flex flex-col gap-2">
-        <input
-          type="search"
-          inputMode="search"
-          placeholder="Buscar por nombre o código de barras"
-          aria-label="Buscar producto"
+        <Buscador
+          etiqueta="Buscar por nombre o código"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="min-h-11 rounded-lg border border-gray-300 bg-white px-3 text-base"
         />
         <div className="flex flex-wrap gap-x-6">
           <Casilla
@@ -113,6 +113,7 @@ export function ListaProductos() {
                   p.activo ? 'border-gray-200' : 'border-dashed border-gray-300 opacity-60'
                 }`}
               >
+                <FotoProducto imagen={p.imagen} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{p.nombre}</p>
                   <p className="truncate text-sm text-gray-500">
@@ -127,7 +128,7 @@ export function ListaProductos() {
                     <p className={`font-semibold tabular-nums ${bajo ? 'text-red-700' : ''}`}>
                       {formatearCantidad(stockDe(p))}
                     </p>
-                    <p className="text-xs text-gray-500">{bajo ? 'bajo stock' : UNIDADES[p.unidad_base]}</p>
+                    <p className="text-xs text-gray-500">{bajo ? 'bajo stock' : unidadCorta(p.unidad_base)}</p>
                   </div>
                 ) : (
                   <p className="text-right text-xs text-gray-500">sin stock</p>

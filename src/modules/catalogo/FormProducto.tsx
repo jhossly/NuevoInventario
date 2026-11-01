@@ -1,16 +1,23 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Camera, Check, Plus, Trash2 } from 'lucide-react';
 import { leerDecimal, paraEditar } from '@/shared/decimal';
+import { useContexto } from '@/modules/sesion/sesion';
 import { navegar } from '@/shared/ruta';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Selector } from '@/shared/ui';
 import {
   OPCIONES_IVA,
+  subirImagenProducto,
   textoIva,
+  unidadCorta,
   useCategorias,
   useGuardarCategoria,
+  useGuardarMedida,
   useGuardarProducto,
+  useMedidas,
   type DatosProducto,
   type Producto,
 } from './api';
+import { FotoProducto } from './FotoProducto';
 
 // Límites del formulario de productos del portal del SRI.
 const LARGO_CODIGO = 25;
@@ -46,16 +53,23 @@ export function FormProducto({
   const categorias = useCategorias();
   const guardar = useGuardarProducto();
   const crearCategoria = useGuardarCategoria();
+  const contexto = useContexto();
+  const medidas = useMedidas();
+  const crearMedida = useGuardarMedida();
 
   const [nombre, setNombre] = useState(producto?.nombre ?? inicial?.nombre ?? '');
   const [categoriaId, setCategoriaId] = useState(producto?.categoria_id ?? '');
-  const [unidad, setUnidad] = useState<'UND' | 'KG'>(producto?.unidad_base ?? 'UND');
+  const [unidad, setUnidad] = useState(producto?.unidad_base ?? 'UND');
   const [codigoIva, setCodigoIva] = useState(producto?.codigo_iva ?? inicial?.codigoIva ?? '4');
   const [codigoPrincipal, setCodigoPrincipal] = useState(producto?.codigo_principal ?? inicial?.codigoPrincipal ?? '');
   const [codigoAuxiliar, setCodigoAuxiliar] = useState(producto?.codigo_auxiliar ?? '');
   const [informacion, setInformacion] = useState(producto?.informacion_adicional ?? '');
   const [stockMinimo, setStockMinimo] = useState(producto ? paraEditar(producto.stock_minimo) : '0');
   const [activo, setActivo] = useState(producto?.activo ?? true);
+  const [imagen, setImagen] = useState(producto?.imagen ?? null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [errorImagen, setErrorImagen] = useState<string | null>(null);
+  const [nuevaMedida, setNuevaMedida] = useState<{ nombre: string; codigo: string } | null>(null);
   const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? true);
   const [costo, setCosto] = useState(costoServicio ? paraEditar(costoServicio) : '');
   const [precio, setPrecio] = useState(inicial?.precio ?? '');
@@ -90,6 +104,7 @@ export function FormProducto({
       codigo_auxiliar: codigoAuxiliar.trim() || null,
       informacion_adicional: informacion.trim() || null,
       controla_stock: controlaStock,
+      imagen,
     };
     // Quien no ve costos no recibe el costo actual: no lo borra al guardar.
     if (!controlaStock && (costoServicio !== undefined || !editando)) {
@@ -115,6 +130,32 @@ export function FormProducto({
     );
   };
 
+  const nombreMedida = (medidas.data?.find((m) => m.codigo === unidad)?.nombre ?? 'unidad').toLowerCase();
+
+  const elegirImagen = async (evento: ChangeEvent<HTMLInputElement>) => {
+    const archivo = evento.target.files?.[0];
+    evento.target.value = '';
+    if (!archivo) return;
+    setErrorImagen(null);
+    setSubiendo(true);
+    try {
+      setImagen(await subirImagenProducto(archivo, contexto.empresa_id));
+    } catch {
+      setErrorImagen('No se pudo subir la imagen');
+    }
+    setSubiendo(false);
+  };
+
+  const agregarMedida = () => {
+    if (!nuevaMedida) return;
+    crearMedida.mutate(nuevaMedida, {
+      onSuccess: ({ codigo }) => {
+        setUnidad(codigo);
+        setNuevaMedida(null);
+      },
+    });
+  };
+
   const agregarCategoria = () => {
     const texto = nuevaCategoria?.trim() ?? '';
     if (texto === '') return;
@@ -128,6 +169,23 @@ export function FormProducto({
 
   return (
     <form onSubmit={enviar} className="flex flex-col gap-4" noValidate>
+      <div className="flex flex-wrap items-center gap-4">
+        <FotoProducto imagen={imagen} className="size-24" />
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 font-medium hover:bg-gray-100">
+            <Camera className="size-5" aria-hidden />
+            {subiendo ? 'Subiendo…' : imagen ? 'Cambiar foto' : 'Poner foto'}
+            <input type="file" accept="image/*" className="sr-only" onChange={elegirImagen} disabled={subiendo} />
+          </label>
+          {imagen && (
+            <Boton variante="secundario" icono={Trash2} onClick={() => setImagen(null)}>
+              Quitar
+            </Boton>
+          )}
+        </div>
+      </div>
+      {errorImagen && <Aviso>{errorImagen}</Aviso>}
+
       <Campo
         etiqueta="Nombre"
         name="nombre"
@@ -175,11 +233,57 @@ export function FormProducto({
         </div>
       )}
 
+      {nuevaMedida && (
+        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Campo
+              etiqueta="Nueva medida"
+              ayuda="Por ejemplo: Funda"
+              value={nuevaMedida.nombre}
+              maxLength={40}
+              onChange={(e) => setNuevaMedida({ ...nuevaMedida, nombre: e.target.value })}
+              autoFocus
+            />
+            <Campo
+              etiqueta="Abreviatura"
+              ayuda="Por ejemplo: fda"
+              value={nuevaMedida.codigo}
+              maxLength={8}
+              onChange={(e) => setNuevaMedida({ ...nuevaMedida, codigo: e.target.value })}
+            />
+          </div>
+          <AvisoError error={crearMedida.error} />
+          <div className="flex gap-2">
+            <Boton variante="secundario" icono={Check} onClick={agregarMedida} disabled={crearMedida.isPending}>
+              Crear
+            </Boton>
+            <Boton variante="secundario" onClick={() => setNuevaMedida(null)}>
+              Cancelar
+            </Boton>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
-        <Selector etiqueta="Se cuenta en" value={unidad} onChange={(e) => setUnidad(e.target.value as 'UND' | 'KG')}>
-          <option value="UND">Unidades</option>
-          <option value="KG">Kilos</option>
-        </Selector>
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Selector etiqueta="Se cuenta en" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
+              {!medidas.data?.some((m) => m.codigo === unidad) && <option value={unidad}>{unidad}</option>}
+              {medidas.data?.map((m) => (
+                <option key={m.codigo} value={m.codigo}>
+                  {m.nombre}
+                </option>
+              ))}
+            </Selector>
+          </div>
+          <Boton
+            variante="secundario"
+            icono={Plus}
+            aria-label="Nueva medida"
+            className="px-3"
+            onClick={() => setNuevaMedida({ nombre: '', codigo: '' })}
+          />
+        </div>
         <Selector etiqueta="Tarifa IVA" value={codigoIva} onChange={(e) => setCodigoIva(e.target.value)}>
           {OPCIONES_IVA.map((o) => (
             <option key={o.codigo} value={o.codigo}>
@@ -226,7 +330,7 @@ export function FormProducto({
 
       {controlaStock ? (
         <Campo
-          etiqueta={`Stock mínimo (${unidad === 'KG' ? 'kg' : 'unidades'})`}
+          etiqueta={`Stock mínimo (${unidadCorta(unidad)})`}
           ayuda="Avisa cuando el stock llega a este número. 0 = sin aviso."
           inputMode="decimal"
           value={stockMinimo}
@@ -236,7 +340,7 @@ export function FormProducto({
       ) : (
         (costoServicio !== undefined || !editando) && (
           <Campo
-            etiqueta={`Costo por ${unidad === 'KG' ? 'kilo' : 'unidad'}`}
+            etiqueta={`Costo por ${nombreMedida}`}
             ayuda="Lo que te cuesta (por ejemplo $0,95 por una recarga de $1). Sirve para la utilidad; las compras lo actualizan."
             inputMode="decimal"
             value={costo}
@@ -249,7 +353,7 @@ export function FormProducto({
       {!editando && (
         <div className="grid grid-cols-2 gap-3">
           <Campo
-            etiqueta={`Precio por ${unidad === 'KG' ? 'kilo' : 'unidad'}`}
+            etiqueta={`Precio por ${nombreMedida}`}
             ayuda="Con IVA incluido"
             inputMode="decimal"
             value={precio}
@@ -277,7 +381,7 @@ export function FormProducto({
       <AvisoError error={guardar.error} />
       {guardado && <Aviso tipo="exito">Cambios guardados</Aviso>}
 
-      <Boton type="submit" disabled={guardar.isPending}>
+      <Boton type="submit" icono={Check} disabled={guardar.isPending || subiendo}>
         {guardar.isPending ? 'Guardando…' : editando ? 'Guardar cambios' : 'Crear producto'}
       </Boton>
     </form>

@@ -6,12 +6,14 @@ import { formatearMomento } from '@/modules/ventas/api';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
-import { Aviso, AvisoError, Boton, Cargando, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { FilePlus2, Layers, Link2, PackagePlus, Trash2, Upload } from 'lucide-react';
+import { Aviso, AvisoError, Boton, Buscador, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
 import {
   presentacionBaseDe,
   useAsociarLinea,
   useCandidatos,
   useComprobantes,
+  useCrearEnLote,
   useCrearVenta,
   useDescartar,
   useImportar,
@@ -56,6 +58,7 @@ export function Comprobantes() {
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [importando, setImportando] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [mensajeLote, setMensajeLote] = useState<string | null>(null);
 
   const subir = async (evento: ChangeEvent<HTMLInputElement>) => {
     const archivos = Array.from(evento.target.files ?? []);
@@ -86,6 +89,7 @@ export function Comprobantes() {
 
   const pendientes = (comprobantes.data ?? []).filter((c) => !c.venta_id);
   const listos = (comprobantes.data ?? []).filter((c) => c.venta_id);
+  const lineasFaltantes = pendientes.flatMap((c) => c.comprobante_lineas.filter((l) => !l.presentacion_id).map((l) => l.id));
 
   return (
     <>
@@ -95,7 +99,8 @@ export function Comprobantes() {
           Descarga del portal del SRI los XML de las facturas que emitiste y súbelos aquí. Cada factura se une a la venta que
           ya registraste en «Vender» o, si no la registraste, crea la venta y descuenta el stock.
         </p>
-        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-gray-900 px-4 font-medium text-white hover:bg-gray-700">
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
+          <Upload className="mr-2 size-5" aria-hidden />
           {importando ? 'Importando…' : 'Subir archivos XML'}
           <input type="file" accept=".xml,text/xml,application/xml" multiple className="sr-only" onChange={subir} disabled={importando} />
         </label>
@@ -113,10 +118,23 @@ export function Comprobantes() {
       {comprobantes.isPending && <Cargando />}
       <AvisoError error={comprobantes.error} />
 
+      {mensajeLote && (
+        <div className="mb-4">
+          <Aviso tipo="exito">{mensajeLote}</Aviso>
+        </div>
+      )}
+      {lineasFaltantes.length > 0 && <CrearTodos lineas={lineasFaltantes} alCrear={setMensajeLote} />}
+
       {pendientes.length > 0 && <h2 className="mb-2 font-semibold">Por resolver ({pendientes.length})</h2>}
       <ul className="mb-6 flex flex-col gap-2">
         {pendientes.map((c) => (
-          <Fila key={c.id} comprobante={c} abierto={abierto === c.id} alAlternar={() => setAbierto(abierto === c.id ? null : c.id)} />
+          <Fila
+            key={c.id}
+            comprobante={c}
+            abierto={abierto === c.id}
+            alAlternar={() => setAbierto(abierto === c.id ? null : c.id)}
+            alCrear={setMensajeLote}
+          />
         ))}
       </ul>
 
@@ -139,7 +157,107 @@ export function Comprobantes() {
   );
 }
 
-function Fila({ comprobante: c, abierto, alAlternar }: { comprobante: Comprobante; abierto: boolean; alAlternar: () => void }) {
+const productosEnTexto = (n: number) => (n === 1 ? '1 producto' : `${n} productos`);
+
+/** Crea los productos de todas las líneas que faltan, en una sola operación. */
+function BotonLote({ lineas, texto, alCrear }: { lineas: string[]; texto: string; alCrear: (mensaje: string) => void }) {
+  const crear = useCrearEnLote();
+  const [sinStock, setSinStock] = useState(false);
+  return (
+    <div className="flex flex-col gap-2">
+      <Casilla
+        etiqueta="Son servicios o recargas: no controlar stock"
+        checked={sinStock}
+        onChange={(e) => setSinStock(e.target.checked)}
+      />
+      <Boton
+        icono={Layers}
+        disabled={crear.isPending || lineas.length === 0}
+        onClick={() =>
+          crear.mutate(
+            { lineas, controlaStock: !sinStock },
+            {
+              onSuccess: (r) =>
+                alCrear(`${productosEnTexto(r.creados)} nuevos${r.existentes > 0 ? `, ${r.existentes} ya existían` : ''}.`),
+            },
+          )
+        }
+      >
+        {crear.isPending ? 'Creando…' : texto}
+      </Boton>
+      <AvisoError error={crear.error} />
+    </div>
+  );
+}
+
+function CrearTodos({ lineas, alCrear }: { lineas: string[]; alCrear: (mensaje: string) => void }) {
+  return (
+    <Tarjeta className="mb-4">
+      <h2 className="mb-1 font-semibold">Faltan productos</h2>
+      <p className="mb-3 text-sm text-gray-600">
+        {lineasSinProducto(lineas.length)}. Se crean con el nombre, código, precio y tarifa de la factura; las líneas con el
+        mismo código o nombre de un producto que ya existe se unen a ese producto.
+      </p>
+      <BotonLote lineas={lineas} texto={`Crear todos (${lineas.length})`} alCrear={alCrear} />
+    </Tarjeta>
+  );
+}
+
+/** Lista con búsqueda para elegir un producto: un selector no sirve con cientos. */
+function ElegirProducto({
+  opciones,
+  disabled,
+  alElegir,
+}: {
+  opciones: { id: string; texto: string }[];
+  disabled: boolean;
+  alElegir: (id: string) => void;
+}) {
+  const [busqueda, setBusqueda] = useState('');
+  const texto = busqueda.trim().toLowerCase();
+  const encontradas = texto === '' ? [] : opciones.filter((o) => o.texto.toLowerCase().includes(texto)).slice(0, 8);
+  return (
+    <div className="relative">
+      <Buscador
+        etiqueta="Buscar el producto"
+        value={busqueda}
+        disabled={disabled}
+        onChange={(e) => setBusqueda(e.target.value)}
+      />
+      {texto !== '' && (
+        <ul className="absolute z-10 mt-1 w-full divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-lg">
+          {encontradas.map((o) => (
+            <li key={o.id}>
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center px-3 text-left hover:bg-gray-50"
+                onClick={() => {
+                  setBusqueda('');
+                  alElegir(o.id);
+                }}
+              >
+                {o.texto}
+              </button>
+            </li>
+          ))}
+          {encontradas.length === 0 && <li className="p-3 text-gray-500">Ningún producto coincide.</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Fila({
+  comprobante: c,
+  abierto,
+  alAlternar,
+  alCrear,
+}: {
+  comprobante: Comprobante;
+  abierto: boolean;
+  alAlternar: () => void;
+  alCrear: (mensaje: string) => void;
+}) {
   const sinProducto = c.comprobante_lineas.filter((l) => !l.presentacion_id).length;
   return (
     <li className="rounded-xl border border-gray-200 bg-white">
@@ -154,12 +272,20 @@ function Fila({ comprobante: c, abierto, alAlternar }: { comprobante: Comprobant
         </div>
         <span className="font-semibold tabular-nums">{formatearDinero(c.total)}</span>
       </button>
-      {abierto && <Detalle comprobante={c} sinProducto={sinProducto} />}
+      {abierto && <Detalle comprobante={c} sinProducto={sinProducto} alCrear={alCrear} />}
     </li>
   );
 }
 
-function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; sinProducto: number }) {
+function Detalle({
+  comprobante: c,
+  sinProducto,
+  alCrear,
+}: {
+  comprobante: Comprobante;
+  sinProducto: number;
+  alCrear: (mensaje: string) => void;
+}) {
   const productos = useProductos();
   const asociar = useAsociarLinea();
   const candidatos = useCandidatos(c.id, true);
@@ -218,21 +344,13 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
             ) : (
               <div className="flex items-end gap-2">
                 <div className="w-64">
-                  <Selector
-                    etiqueta="¿Qué producto es?"
-                    value=""
+                  <ElegirProducto
+                    opciones={opciones}
                     disabled={asociar.isPending}
-                    onChange={(e) => e.target.value && asociar.mutate({ lineaId: l.id, presentacionId: e.target.value })}
-                  >
-                    <option value="">Elegir…</option>
-                    {opciones.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.texto}
-                      </option>
-                    ))}
-                  </Selector>
+                    alElegir={(id) => asociar.mutate({ lineaId: l.id, presentacionId: id })}
+                  />
                 </div>
-                <Boton variante="secundario" onClick={() => setCreando(creando === l.id ? null : l.id)}>
+                <Boton variante="secundario" icono={PackagePlus} onClick={() => setCreando(creando === l.id ? null : l.id)}>
                   {creando === l.id ? 'Cancelar' : 'Crear producto'}
                 </Boton>
               </div>
@@ -259,6 +377,16 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
         ))}
       </ol>
 
+      {sinProducto > 1 && (
+        <div className="mb-4 rounded-lg bg-gray-50 p-3">
+          <BotonLote
+            lineas={c.comprobante_lineas.filter((l) => !l.presentacion_id).map((l) => l.id)}
+            texto={`Crear los ${sinProducto} productos de esta factura`}
+            alCrear={alCrear}
+          />
+        </div>
+      )}
+
       <h3 className="mb-1 text-sm font-semibold">¿Ya registraste esta venta en «Vender»?</h3>
       {candidatos.isPending && <Cargando />}
       {candidatos.data?.length === 0 && (
@@ -273,6 +401,7 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
             </span>
             <Boton
               variante="secundario"
+              icono={Link2}
               disabled={vincular.isPending}
               onClick={() => vincular.mutate({ comprobanteId: c.id, ventaId: v.venta_id })}
             >
@@ -283,11 +412,12 @@ function Detalle({ comprobante: c, sinProducto }: { comprobante: Comprobante; si
       </ul>
 
       <div className="flex flex-wrap gap-2">
-        <Boton disabled={sinProducto > 0 || crear.isPending} onClick={() => crear.mutate(c.id)}>
+        <Boton icono={FilePlus2} disabled={sinProducto > 0 || crear.isPending} onClick={() => crear.mutate(c.id)}>
           {crear.isPending ? 'Creando…' : 'No la registré: crear la venta'}
         </Boton>
         <Boton
           variante="secundario"
+          icono={Trash2}
           disabled={descartar.isPending}
           onClick={() => window.confirm(`¿Descartar la factura ${c.numero}? Se puede volver a subir.`) && descartar.mutate(c.id)}
         >

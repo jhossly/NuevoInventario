@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { consultar, llamar } from '@/lib/datos';
 import { decimal, uuid } from '@/shared/esquemas';
+import { reducirImagen } from '@/shared/imagen';
 
 // -----------------------------------------------------------------------------
 // Esquemas de lo que devuelve la base
@@ -21,7 +22,8 @@ export const esquemaPresentacion = z.object({
 export const esquemaProducto = z.object({
   id: uuid,
   nombre: z.string(),
-  unidad_base: z.enum(['UND', 'KG']),
+  unidad_base: z.string(),
+  imagen: z.string().nullable(),
   tarifa_iva: decimal,
   codigo_iva: z.string(),
   codigo_principal: z.string().nullable(),
@@ -51,6 +53,7 @@ const COLUMNAS_PRODUCTO = [
   'id',
   'nombre',
   'unidad_base',
+  'imagen',
   'tarifa_iva:tarifa_iva::text',
   'codigo_iva',
   'codigo_principal',
@@ -68,7 +71,10 @@ const COLUMNAS_PRODUCTO = [
 // -----------------------------------------------------------------------------
 // Ayudas de lectura
 // -----------------------------------------------------------------------------
-export const UNIDADES = { UND: 'unidades', KG: 'kg' } as const;
+/** Cómo se escribe la medida junto a una cantidad: «3 kg», «3 paq». */
+export function unidadCorta(codigo: string): string {
+  return codigo === 'UND' ? 'unidades' : codigo.toLowerCase();
+}
 
 /**
  * Tarifas de IVA del formulario de productos del portal del SRI, por su código
@@ -143,7 +149,8 @@ export function useCategorias() {
 export interface DatosProducto {
   nombre?: string;
   categoria_id?: string | null;
-  unidad_base?: 'UND' | 'KG';
+  unidad_base?: string;
+  imagen?: string | null;
   codigo_iva?: string;
   stock_minimo?: string;
   activo?: boolean;
@@ -201,4 +208,57 @@ export function useGuardarCategoria() {
     mutationFn: (nombre: string) => llamar('guardar_categoria', { p_id: null, p_nombre: nombre }, esquemaId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: claves.categorias }),
   });
+}
+
+// -----------------------------------------------------------------------------
+// Medidas (D-048)
+// -----------------------------------------------------------------------------
+export const esquemaMedida = z.object({ codigo: z.string(), nombre: z.string() });
+export type Medida = z.infer<typeof esquemaMedida>;
+
+const claveMedidas = ['medidas'] as const;
+
+export function useMedidas() {
+  return useQuery({
+    queryKey: claveMedidas,
+    queryFn: () =>
+      consultar(supabase.from('unidades_medida').select('codigo,nombre').order('nombre'), z.array(esquemaMedida)),
+  });
+}
+
+export function useGuardarMedida() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { codigo: string; nombre: string }) =>
+      llamar('guardar_medida', { p_codigo: d.codigo, p_nombre: d.nombre }, z.object({ codigo: z.string() })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: claveMedidas }),
+  });
+}
+
+export function useEliminarMedida() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (codigo: string) => llamar('eliminar_medida', { p_codigo: codigo }, z.object({ codigo: z.string() })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: claveMedidas }),
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Imagen del producto (D-049)
+// -----------------------------------------------------------------------------
+const DEPOSITO = 'productos';
+
+/** Reduce la foto y la sube a la carpeta de la bodega; devuelve su ruta. */
+export async function subirImagenProducto(archivo: File, empresaId: string): Promise<string> {
+  const lienzo = await reducirImagen(archivo, 400);
+  const contenido = await new Promise<Blob | null>((listo) => lienzo.toBlob(listo, 'image/webp', 0.8));
+  if (!contenido) throw new Error('No se pudo leer la imagen');
+  const ruta = `${empresaId}/${crypto.randomUUID()}.webp`;
+  const { error } = await supabase.storage.from(DEPOSITO).upload(ruta, contenido, { contentType: contenido.type });
+  if (error) throw new Error('No se pudo subir la imagen');
+  return ruta;
+}
+
+export function urlImagen(ruta: string): string {
+  return supabase.storage.from(DEPOSITO).getPublicUrl(ruta).data.publicUrl;
 }

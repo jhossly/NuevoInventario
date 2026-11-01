@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { UNIDADES, stockDe, useProductos, type Producto } from '@/modules/catalogo/api';
+import { unidadCorta, stockDe, useProductos, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal, paraEditar } from '@/shared/decimal';
 import { formatearCantidad } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { Aviso, AvisoError, Boton, Cargando, Encabezado } from '@/shared/ui';
+import { Buscador, Aviso, AvisoError, Boton, Cargando, Encabezado } from '@/shared/ui';
 import { useConfirmarConteo, useConteoBorrador, useGuardarConteo, type LineaConteo } from './api';
 
 /**
@@ -115,14 +115,7 @@ function FormConteo({
       {conteoId && <Aviso tipo="info">Continúas un conteo en borrador.</Aviso>}
 
       <div className="my-4 flex flex-col gap-2">
-        <input
-          type="search"
-          placeholder="Buscar producto"
-          aria-label="Buscar producto"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="min-h-11 rounded-lg border border-gray-300 bg-white px-3 text-base"
-        />
+        <Buscador etiqueta="Buscar producto" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         <input
           placeholder="Nota (opcional): conteo de fin de mes…"
           aria-label="Nota del conteo"
@@ -142,7 +135,7 @@ function FormConteo({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{p.nombre}</p>
                 <p className="text-sm text-gray-500">
-                  Sistema: {formatearCantidad(stockDe(p))} {UNIDADES[p.unidad_base]}
+                  Sistema: {formatearCantidad(stockDe(p))} {unidadCorta(p.unidad_base)}
                   {diferencia !== null && diferencia !== 0 && (
                     <span className={diferencia > 0 ? 'text-green-800' : 'text-red-800'}>
                       {' '}

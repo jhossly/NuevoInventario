@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { leerDecimal, paraEditar } from '@/shared/decimal';
 import { AvisoError, Boton, Campo, Casilla } from '@/shared/ui';
-import { useGuardarPresentacion, type DatosPresentacion, type Presentacion, type Producto } from './api';
+import { unidadCorta, useGuardarPresentacion, type DatosPresentacion, type Presentacion, type Producto } from './api';
 
 interface Errores {
   nombre?: string;
@@ -20,7 +20,7 @@ export function FormPresentacion({
   alTerminar: () => void;
 }) {
   const guardar = useGuardarPresentacion();
-  const unidad = producto.unidad_base === 'KG' ? 'kg' : 'unidades';
+  const unidad = unidadCorta(producto.unidad_base);
 
   const [nombre, setNombre] = useState(presentacion?.nombre ?? '');
   const [factor, setFactor] = useState(presentacion ? paraEditar(presentacion.factor) : '');

@@ -6,7 +6,7 @@ import { formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Buscador, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
 import { useAjustarFiado, useCuentasFiado, useMovimientosFiado, useRegistrarAbono, type Cuenta } from './api';
 
 const TIPOS = { CARGO: 'Venta al fiado', ABONO: 'Abono', AJUSTE: 'Ajuste' } as const;
@@ -16,6 +16,8 @@ const MEDIOS_ABONO = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TAR
 export function Fiado() {
   const cuentas = useCuentasFiado();
   const [elegido, setElegido] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const visibles = (cuentas.data ?? []).filter((c) => c.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()));
   const deben = (cuentas.data ?? []).filter((c) => Number(c.saldo) !== 0);
   const total = sumarDinero(deben.map((c) => c.saldo));
 
@@ -32,8 +34,14 @@ export function Fiado() {
         </p>
       )}
       {cuentas.isSuccess && cuentas.data.length === 0 && <Tarjeta>Ningún cliente tiene fiado autorizado ni deuda.</Tarjeta>}
+      <Buscador
+        etiqueta="Buscar cliente"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="mb-3"
+      />
       <ul className="flex flex-col gap-2">
-        {cuentas.data?.map((c) => (
+        {visibles.map((c) => (
           <li key={c.cliente_id} className="rounded-xl border border-gray-200 bg-white">
             <button
               type="button"
@@ -117,7 +125,7 @@ function Abonar({ cuenta }: { cuenta: Cuenta }) {
               role="radio"
               aria-checked={medio === m}
               onClick={() => setMedio(m)}
-              className={`min-h-11 rounded-lg border px-3 text-sm ${medio === m ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white'}`}
+              className={`min-h-11 rounded-lg border px-3 text-sm ${medio === m ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-300 bg-white'}`}
             >
               {MEDIOS_ABONO[m]}
             </button>

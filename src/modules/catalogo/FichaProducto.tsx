@@ -6,7 +6,7 @@ import { enlace } from '@/shared/ruta';
 import { AvisoError, Boton, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { FormPresentacion } from './FormPresentacion';
 import { FormProducto } from './FormProducto';
-import { UNIDADES, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useProducto, type Producto } from './api';
+import { unidadCorta, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useProducto, type Producto } from './api';
 
 export function FichaProducto({ id }: { id: string }) {
   const producto = useProducto(id);
@@ -30,7 +30,7 @@ function Ficha({ producto }: { producto: Producto }) {
   const esDueno = contexto.rol === 'DUENO';
   const valorizado = useValorizado(contexto.ve_costos);
   const costo = valorizado.data?.productos.find((p) => p.producto_id === producto.id);
-  const unidad = UNIDADES[producto.unidad_base];
+  const unidad = unidadCorta(producto.unidad_base);
 
   return (
     <>
@@ -133,7 +133,7 @@ function Ficha({ producto }: { producto: Producto }) {
 function Presentaciones({ producto, editable }: { producto: Producto; editable: boolean }) {
   // null: ningún formulario abierto; 'nueva' o el id de la que se edita.
   const [abierta, setAbierta] = useState<string | null>(null);
-  const unidad = producto.unidad_base === 'KG' ? 'kg' : 'u';
+  const unidad = producto.unidad_base === 'UND' ? 'u' : unidadCorta(producto.unidad_base);
 
   return (
     <Tarjeta>

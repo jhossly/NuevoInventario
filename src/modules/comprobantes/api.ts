@@ -118,6 +118,20 @@ export function useAsociarLinea() {
   });
 }
 
+/** Crea de una vez los productos de las líneas elegidas (D-050). */
+export function useCrearEnLote() {
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: (d: { lineas: string[]; controlaStock: boolean }) =>
+      llamar(
+        'crear_productos_de_lineas',
+        { p_lineas: d.lineas, p_controla_stock: d.controlaStock },
+        z.object({ creados: z.number(), existentes: z.number() }),
+      ),
+    onSuccess: invalidar,
+  });
+}
+
 export function useVincular() {
   const invalidar = useInvalidar();
   return useMutation({

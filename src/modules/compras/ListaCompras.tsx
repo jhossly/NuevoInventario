@@ -1,10 +1,20 @@
+import { useState } from 'react';
 import { formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { AvisoError, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { AvisoError, Buscador, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { formatearFecha, useCompras } from './api';
 
 export function ListaCompras() {
   const compras = useCompras();
+  const [busqueda, setBusqueda] = useState('');
+  const texto = busqueda.trim().toLowerCase();
+  const visibles = (compras.data ?? []).filter(
+    (c) =>
+      texto === '' ||
+      (c.proveedores?.nombre ?? '').toLowerCase().includes(texto) ||
+      (c.numero_documento ?? '').toLowerCase().includes(texto) ||
+      c.fecha.includes(texto),
+  );
 
   return (
     <>
@@ -19,12 +29,18 @@ export function ListaCompras() {
           </>
         }
       />
+      <Buscador
+        etiqueta="Buscar por proveedor, documento o fecha"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="mb-3"
+      />
       {compras.isPending && <Cargando />}
       <AvisoError error={compras.error} />
       {compras.isSuccess && compras.data.length === 0 && <Tarjeta>Todavía no hay compras registradas.</Tarjeta>}
 
       <ul className="flex flex-col gap-2">
-        {compras.data?.map((c) => (
+        {visibles.map((c) => (
           <li key={c.id}>
             <a
               href={enlace({ nombre: 'compra', id: c.id })}

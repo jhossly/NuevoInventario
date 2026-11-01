@@ -163,7 +163,7 @@ function MargenPorProducto({ rango }: { rango: Rango }) {
                 <tr key={p.producto_id} className="border-t border-gray-100">
                   <td className="py-1">{p.nombre}</td>
                   <td className="text-right">
-                    {formatearCantidad(p.cantidad)} {p.unidad_base === 'KG' ? 'kg' : 'u'}
+                    {formatearCantidad(p.cantidad)} {p.unidad_base === 'UND' ? 'u' : p.unidad_base.toLowerCase()}
                   </td>
                   <td className="text-right">{formatearDinero(p.ventas)}</td>
                   <td className="text-right">{formatearDinero(p.costo)}</td>
@@ -205,7 +205,7 @@ function AcumuladoRimpe({ anio }: { anio: number }) {
             aria-valuenow={Math.round(fraccion * 100)}
             aria-label="Avance hacia el límite RIMPE"
           >
-            <div className={`h-full ${alerta ? 'bg-red-600' : 'bg-gray-800'}`} style={{ width: `${fraccion * 100}%` }} />
+            <div className={`h-full ${alerta ? 'bg-red-600' : 'bg-emerald-700'}`} style={{ width: `${fraccion * 100}%` }} />
           </div>
           {alerta && <p className="mt-2 text-sm text-red-700">Te acercas al límite: habla con tu contador.</p>}
           <div className="mt-3 grid grid-cols-6 gap-1 text-center text-xs tabular-nums sm:grid-cols-12">

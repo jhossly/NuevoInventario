@@ -32,6 +32,7 @@ describe('leerRuta', () => {
       { nombre: 'comprobantes' },
       { nombre: 'iva-ventas' },
       { nombre: 'mi-negocio' },
+      { nombre: 'medidas' },
     ];
     for (const ruta of rutas) expect(leerRuta(enlace(ruta))).toEqual(ruta);
   });

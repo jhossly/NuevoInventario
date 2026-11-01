@@ -1,4 +1,4 @@
-import { UNIDADES, useProducto } from '@/modules/catalogo/api';
+import { unidadCorta, useProducto } from '@/modules/catalogo/api';
 import { useContexto } from '@/modules/sesion/sesion';
 import { formatearCantidad, formatearCosto } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
@@ -22,7 +22,7 @@ export function Kardex({ id }: { id: string }) {
     );
   }
 
-  const unidad = producto.data ? UNIDADES[producto.data.unidad_base] : '';
+  const unidad = producto.data ? unidadCorta(producto.data.unidad_base) : '';
 
   return (
     <>

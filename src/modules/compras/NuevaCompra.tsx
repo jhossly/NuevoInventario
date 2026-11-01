@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { UNIDADES, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
+import { unidadCorta, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal } from '@/shared/decimal';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { Buscador, Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { FormProveedor } from './Proveedores';
 import { useCalculoCompra, useProveedores, useRegistrarCompra, type LineaCompra } from './api';
@@ -187,7 +187,7 @@ export function NuevaCompra() {
           {lineas.map((l, i) => {
             const errores = mostrarErrores ? (validadas[i]?.errores ?? {}) : {};
             const calculada = calculo.data?.lineas[i];
-            const unidad = UNIDADES[l.producto.unidad_base];
+            const unidad = unidadCorta(l.producto.unidad_base);
             return (
               <li
                 key={l.local}
@@ -244,13 +244,10 @@ export function NuevaCompra() {
         </ol>
 
         <div className="mt-3">
-          <input
-            type="search"
-            placeholder="Agregar producto: escribe el nombre"
-            aria-label="Buscar producto para agregar"
+          <Buscador
+            etiqueta="Agregar producto: escribe el nombre"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-base"
           />
           {opciones.length > 0 && (
             <ul className="mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
@@ -265,7 +262,7 @@ export function NuevaCompra() {
                       {producto.nombre} — {presentacion.nombre}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {formatearCantidad(presentacion.factor)} {UNIDADES[producto.unidad_base]}
+                      {formatearCantidad(presentacion.factor)} {unidadCorta(producto.unidad_base)}
                     </span>
                   </button>
                 </li>

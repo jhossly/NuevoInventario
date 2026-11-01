@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UNIDADES } from '@/modules/catalogo/api';
+import { unidadCorta } from '@/modules/catalogo/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
@@ -50,7 +50,7 @@ function Detalle({ compra, volver }: { compra: Compra; volver: string }) {
         <h2 className="mb-2 font-semibold">Productos</h2>
         <ol className="divide-y divide-gray-100">
           {compra.compra_detalles.map((d) => {
-            const unidad = UNIDADES[d.productos.unidad_base];
+            const unidad = unidadCorta(d.productos.unidad_base);
             return (
               <li key={d.orden} className="py-2">
                 <div className="flex justify-between gap-2">

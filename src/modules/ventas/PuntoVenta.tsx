@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { UNIDADES, stockDe, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
+import { Banknote, CreditCard, HandCoins, Landmark, type LucideIcon } from 'lucide-react';
+import { unidadCorta, stockDe, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
 import { useCuentasFiado, useResumenCaja } from '@/modules/caja/api';
 import { leerDecimal, paraEditar, restarDinero } from '@/shared/decimal';
 import { aTexto } from '@/shared/fechas';
@@ -8,7 +9,8 @@ import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Cargando, Selector, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Buscador, Campo, Cargando, Selector, Tarjeta } from '@/shared/ui';
+import { FotoProducto } from '@/modules/catalogo/FotoProducto';
 import { FormCliente } from './Clientes';
 import {
   COMPROBANTES,
@@ -22,6 +24,13 @@ import {
   type Medio,
   type TipoComprobante,
 } from './api';
+
+const ICONOS_MEDIO: Record<Medio, LucideIcon> = {
+  EFECTIVO: Banknote,
+  TRANSFERENCIA: Landmark,
+  TARJETA: CreditCard,
+  FIADO: HandCoins,
+};
 
 interface LineaEnPantalla {
   producto: Producto;
@@ -66,7 +75,6 @@ export function PuntoVenta() {
 
   const opciones = useMemo<Opcion[]>(() => {
     const texto = normalizar(busqueda.trim());
-    if (texto.length < 2) return [];
     return (productos.data ?? [])
       .filter((p) => p.activo)
       .flatMap((p) =>
@@ -82,7 +90,7 @@ export function PuntoVenta() {
           )
           .map((r) => ({ producto: p, presentacion: r })),
       )
-      .slice(0, 10);
+      .slice(0, 40);
   }, [productos.data, busqueda]);
 
   const agregar = ({ producto, presentacion }: Opcion) => {
@@ -102,7 +110,7 @@ export function PuntoVenta() {
 
   // Enter: un código de barras exacto o un único resultado se agregan solos.
   const alTeclear = (evento: KeyboardEvent<HTMLInputElement>) => {
-    if (evento.key !== 'Enter') return;
+    if (evento.key !== 'Enter' || busqueda.trim() === '') return;
     evento.preventDefault();
     const porCodigo = opciones.find((o) => o.presentacion.codigo_barras === busqueda.trim());
     const elegida = porCodigo ?? (opciones.length === 1 ? opciones[0] : undefined);
@@ -176,44 +184,43 @@ export function PuntoVenta() {
       <section>
         <h1 className="mb-3 text-xl font-semibold">Vender</h1>
         <AvisoIvaCero />
-        <div className="relative mb-3">
-          <input
-            ref={buscador}
-            type="search"
-            inputMode="search"
-            autoFocus
-            placeholder="Producto o código de barras"
-            aria-label="Buscar producto o escanear código"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={alTeclear}
-            className="min-h-12 w-full rounded-lg border border-gray-300 bg-white px-3 text-base"
-          />
-          {opciones.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-lg">
-              {opciones.map((o) => (
-                <li key={o.presentacion.id}>
-                  <button
-                    type="button"
-                    onClick={() => agregar(o)}
-                    className="flex min-h-12 w-full items-center gap-3 px-3 text-left hover:bg-gray-50"
-                  >
-                    <span className="flex-1">
-                      {o.producto.nombre}
-                      {Number(o.presentacion.factor) !== 1 && ` — ${o.presentacion.nombre}`}
-                      <span className="block text-sm text-gray-500">
-                        {o.producto.controla_stock
-                          ? `Stock ${formatearCantidad(stockDe(o.producto))} ${UNIDADES[o.producto.unidad_base]}`
-                          : 'Sin control de stock'}
-                      </span>
-                    </span>
-                    <span className="font-semibold tabular-nums">{formatearDinero(o.presentacion.precio_venta ?? '0')}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        <Buscador
+          ref={buscador}
+          etiqueta="Buscar producto o escanear código"
+          autoFocus
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={alTeclear}
+          className="mb-3"
+        />
+        <ul className="mb-4 grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
+          {opciones.map((o) => (
+            <li key={o.presentacion.id}>
+              <button
+                type="button"
+                onClick={() => agregar(o)}
+                className="flex h-full w-full flex-col items-center gap-1 rounded-xl border border-gray-200 bg-white p-2 text-center hover:border-emerald-600"
+              >
+                <FotoProducto imagen={o.producto.imagen} className="size-20" />
+                <span className="line-clamp-2 text-sm font-medium">
+                  {o.producto.nombre}
+                  {Number(o.presentacion.factor) !== 1 && ` — ${o.presentacion.nombre}`}
+                </span>
+                <span className="font-bold tabular-nums text-emerald-800">
+                  {formatearDinero(o.presentacion.precio_venta ?? '0')}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {o.producto.controla_stock
+                    ? `Quedan ${formatearCantidad(stockDe(o.producto))} ${unidadCorta(o.producto.unidad_base)}`
+                    : 'Sin control de stock'}
+                </span>
+              </button>
+            </li>
+          ))}
+          {busqueda.trim() !== '' && opciones.length === 0 && (
+            <li className="col-span-full p-3 text-gray-500">Ningún producto coincide.</li>
           )}
-        </div>
+        </ul>
 
         {ultima && (
           <div className="mb-3">
@@ -229,7 +236,7 @@ export function PuntoVenta() {
 
         {lineas.length === 0 ? (
           <Tarjeta>
-            <p className="text-gray-500">Escribe al menos 2 letras del producto o escanea su código.</p>
+            <p className="text-gray-500">Toca un producto o escanea su código.</p>
           </Tarjeta>
         ) : (
           <ol className="flex flex-col gap-2">
@@ -375,10 +382,14 @@ export function PuntoVenta() {
                   role="radio"
                   aria-checked={medio === m}
                   onClick={() => setMedio(m)}
-                  className={`min-h-11 rounded-lg border text-sm ${
-                    medio === m ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white'
+                  className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border text-sm ${
+                    medio === m ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-300 bg-white'
                   }`}
                 >
+                  {(() => {
+                    const IconoMedio = ICONOS_MEDIO[m];
+                    return <IconoMedio className="size-4" aria-hidden />;
+                  })()}
                   {MEDIOS[m]}
                 </button>
               ))}
