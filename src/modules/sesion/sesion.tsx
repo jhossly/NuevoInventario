@@ -9,6 +9,7 @@ import { ErrorDeNegocio } from '@/shared/rpc';
 const esquemaContexto = z.object({
   empresa_id: z.string().uuid(),
   nombre: z.string(),
+  logo: z.string().nullable(),
   regimen: z.string(),
   rol: z.enum(['DUENO', 'VENDEDOR']),
   ve_costos: z.boolean(),

@@ -77,6 +77,8 @@ Crea el del dueño y el de quien vende (si todavía no hay vendedor, solo el del
 3. Cambia **solo** los valores entre comillas de la sección «Datos de la bodega»: RUC, razón social, nombre comercial, correos y nombres. Si aún no hay vendedor, deja `v_correo_vendedor` como `''`.
 4. Pulsa **Run**. Debe decir «Listo: bodega …» y mostrar una tabla con los correos y su rol (`DUENO`, `VENDEDOR`).
 
+El nombre, el logo y los demás datos se cambian después en la app, en **Mi negocio**; solo el RUC debe quedar bien desde aquí.
+
 Si dice un error («No existe el usuario…», «El RUC debe tener 13 dígitos»…), corrige y vuelve a ejecutar: mientras haya error no se guarda nada. Se ejecuta una sola vez; una segunda vez avisa «Ya hay una bodega registrada».
 
 ## 6. Publicar la página en Vercel

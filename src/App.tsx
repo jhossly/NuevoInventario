@@ -12,6 +12,7 @@ import { DetalleVenta } from '@/modules/ventas/DetalleVenta';
 import { ListaVentas } from '@/modules/ventas/ListaVentas';
 import { PuntoVenta } from '@/modules/ventas/PuntoVenta';
 import { IvaVentas } from '@/modules/ventas/IvaVentas';
+import { MiNegocio } from '@/modules/negocio/MiNegocio';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
@@ -72,6 +73,7 @@ const SECCIONES: { titulo: string; ruta: Ruta; incluye: Ruta['nombre'][]; soloDu
     soloDueno: true,
   },
   { titulo: 'Reportes', ruta: { nombre: 'reportes' }, incluye: ['reportes', 'iva-ventas'], soloDueno: true },
+  { titulo: 'Mi negocio', ruta: { nombre: 'mi-negocio' }, incluye: ['mi-negocio'], soloDueno: true },
 ];
 
 function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
@@ -81,8 +83,11 @@ function Marco({ contexto, correo }: { contexto: Contexto; correo: string }) {
     <div className="min-h-dvh">
       <nav className="sticky top-0 z-10 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
-          <a href={enlace({ nombre: 'vender' })} className="hidden max-w-40 shrink-0 truncate font-semibold sm:block">
-            {contexto.nombre}
+          <a href={enlace({ nombre: 'vender' })} className="flex max-w-48 shrink-0 items-center gap-2" aria-label={contexto.nombre}>
+            {contexto.logo && <img src={contexto.logo} alt="" className="size-8 rounded object-contain" />}
+            <span className="hidden truncate font-semibold sm:block">
+              {contexto.nombre}
+            </span>
           </a>
           {/* En el celular las secciones no caben: se desplazan de lado. */}
           <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
@@ -164,6 +169,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<Comprobantes />);
     case 'iva-ventas':
       return soloDueno(<IvaVentas />);
+    case 'mi-negocio':
+      return soloDueno(<MiNegocio />);
     case 'no-encontrada':
       return (
         <Tarjeta>

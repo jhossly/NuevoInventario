@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (Fase 12 en curso: migraciones aplicadas en Supabase)
+Última actualización: 2026-10-31 (Fase 12: bodega dada de alta en Supabase; «Mi negocio» listo en local, falta subirlo)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-046). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-047). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) enlazado y con las 9 migraciones aplicadas. Falta desde el paso 3 de `docs/PRODUCCION.md`: cerrar registro, usuarios, alta y Vercel |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con 9 migraciones y la bodega dada de alta. Falta: `db push --linked` de `20261105000000_mi_negocio.sql` **antes** de `git push` (la app nueva exige `logo` en `mi_contexto`), publicar en Vercel, comprobar y cargar datos |
 
 ## Migraciones
 
@@ -62,6 +62,9 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261102000000_comprobantes_sri.sql` | `comprobantes` (XML guardado; solo se vincula una vez; se descarta si no tiene venta), `comprobante_lineas` (solo cambia el producto asociado, antes del vínculo), `codigos_sri` (memoria código → presentación). Lectores `privado.xml_texto`, `xml_interno` (CDATA o escapado), `xml_numero`, `digito_clave_acceso` (módulo 11). Expuestas, solo Dueño: `importar_comprobante`, `asociar_linea_comprobante`, `candidatos_comprobante`, `vincular_comprobante`, `crear_venta_de_comprobante`, `descartar_comprobante` |
 | `20261103000000_productos_sri_iva.sql` | Productos con `codigo_principal` (único por bodega), `codigo_auxiliar` (25 caracteres), `informacion_adicional` (300) y `codigo_iva` del SRI (0, 5, 4 = 15 %, 6 = No objeto, 7 = Exento); `tarifa_iva` se deriva por trigger. `venta_detalles.codigo_iva`. Trigger que asocia líneas de facturas del SRI por código principal o auxiliar. `iva_ventas_periodos` + `privado.iva_cero_en`. Expuestas: `fijar_iva_ventas`, `quitar_iva_ventas` (solo Dueño); nuevas versiones de `guardar_producto` y `privado.calcular_lineas_venta` (IVA 0 % mientras rija) |
 | `20261104000000_productos_sin_stock.sql` | `productos.controla_stock`. Nuevas versiones de `privado.registrar_movimiento` (sin control de stock: no toca existencias ni kardex, costo = `existencias.ultimo_costo` o 0; la compra actualiza ese costo; apertura/ajuste/merma/conteo se rechazan), `guardar_producto` (claves `controla_stock` y `costo_servicio`; solo se apaga con stock en cero) e `inventario_valorizado` (devuelve `controla_stock` y `ultimo_costo`) |
+| `20261105000000_mi_negocio.sql` | `empresas.direccion`, `telefono`, `logo` (data URL validada). Expuesta, solo Dueño: `guardar_mi_negocio`. `mi_contexto` devuelve también `logo` |
+
+Interfaz (Mi negocio): sección del menú solo para el Dueño, con logo (se reduce en el navegador), nombre, razón social, RUC bloqueado, dirección, teléfono y ajustes. El logo y el nombre se ven arriba en la app.
 
 Interfaz (sin stock): casilla «Controla stock» en el producto; sin ella, «Costo por unidad» en lugar del stock mínimo. La ficha dice «No controla stock» con su costo (sin ajuste ni kardex); la lista muestra «sin stock», «Vender» dice «Sin control de stock» y el conteo no los incluye.
 
@@ -115,6 +118,8 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Windows 11 del usuario: Supabase local | `009_productos_sin_stock` (20: vender recargas sin stock con su costo, sin kardex, devolver y anular sin mover stock, la compra cambia el costo y no el stock, apertura y merma rechazadas, no se apaga con stock, Vendedor sin costo, volver a controlar) | **364/364 pasan**. Mutación: motor anterior → fallan S2–S4 |
 | 2026-10-27 | Navegador, celular, datos del seed | Dueño: alta de «Recarga Claro $1» sin control de stock y costo $0,95; ficha «No controla stock»; en «Vender» «Sin control de stock», cobro por transferencia; detalle con costo $0,95 y utilidad $0,05; lista con «sin stock». Typecheck y Vitest (49) pasan | **Todo funciona** |
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
+| 2026-10-31 | Windows 11 del usuario: Supabase local | `010_mi_negocio` (16: guardar y recortar, lo no enviado no cambia, sesión con nombre y logo, SVG y logo grande rechazados, RUC no cambia, Vendedor sin permiso, aislamiento, auditoría sin imagen) | **380/380 pasan**. Mutación: sin la restricción del logo → fallan N7 y N8 |
+| 2026-10-31 | Navegador, 1024 px y celular, datos del seed | Dueño: logo de 1000×600 reducido a 256×154 (3 KB), nombre nuevo guardado y visible en la cabecera sin recargar; en el celular el logo se ve arriba. Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-10-27 | Supabase local sin seed (`db reset --no-seed`) | `alta_bodega.sql`: sin cambiar datos y sin usuarios → errores claros; usuarios creados por la API de Auth (como el panel) → bodega con Dueño y Vendedor; segunda vez → «Ya hay una bodega». Ingreso del Dueño nuevo: bodega vacía | **Funciona**. Luego `db reset` con seed |
 | 2026-10-27 | GitHub Actions, run 40598107335, commit `1982149` | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia (crear producto desde la línea) | **Pasan todos los pasos** |
 | 2026-10-27 | GitHub Actions, run 40594682151, commit `e80b1d3` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `009_productos_sin_stock`) + concurrencia | **Pasan todos los pasos** |
