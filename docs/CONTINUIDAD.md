@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-10-31 (Fase 12: «Mi negocio» en Supabase y GitHub, CI en verde)
+Última actualización: 2026-10-31 (Fase 12: página publicada en Vercel; falta comprobar, cargar datos y usar en paralelo con Excel)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 10 migraciones y la bodega dada de alta (razón social en blanco: completarla en Mi negocio). Falta: comprobar en Vercel, cargar datos y usar en paralelo con Excel |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 10 migraciones y la bodega dada de alta (razón social en blanco: completarla en Mi negocio). Página publicada en Vercel (variables como «Config»; al cambiarlas hay que hacer Redeploy). Falta: comprobar con el paso 7 de la guía, cargar datos y usar en paralelo con Excel |
 
 ## Migraciones
 
