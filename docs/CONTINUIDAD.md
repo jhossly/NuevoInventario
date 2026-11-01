@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (MVP-2: facturación electrónica construida y probada contra un SRI simulado; sin subir)
+Última actualización: 2026-11-01 (MVP-2 subido a Supabase, función y Vercel, apagado; CI en verde; falta probar con el SRI real)
 
 ---
 
@@ -47,8 +47,8 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) y página en Vercel (usar el dominio de producción). Sin subir: migraciones `20261107` y `20261108`, función `facturar` y pantallas (`db push --linked` **antes** de `git push`) |
-| MVP-2. Facturación electrónica | **Construida, sin probar contra el SRI real**: falta el .p12 del dueño, el ambiente de pruebas y el código de barras del RIDE |
+| 12. Contador y puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 13 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). Falta comprobar, cargar stock y usar en paralelo con Excel |
+| MVP-2. Facturación electrónica | **Publicada y apagada, sin probar contra el SRI real**: faltan los secretos con el .p12 del dueño, el ambiente de pruebas y el código de barras del RIDE |
 
 ## Migraciones
 
@@ -128,6 +128,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-01 | GitHub Actions, run 41354911622, commit `d36acd5`; Vercel; función `facturar` en Supabase | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia. Función desplegada: sin sesión 401, OPTIONS 200 | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Edge runtime local + SRI simulado + navegador | Con .p12 de prueba: venta, firma, recepción y autorización; repetir no gasta número; «Vender» emite solo y muestra «Autorizada»; RIDE y configuración. Las etiquetas salen en el mismo orden que la factura real | **Funciona**. NO probado contra el SRI real, ni desde la región de Supabase |
 | 2026-10-31 | Windows 11 del usuario: Supabase local y navegador | `012_eliminar_productos` (14) y prueba en pantalla: producto con stock rechazado, presentación y producto nuevos eliminados, vuelve a la lista; «Crear todos» muestra «2 productos nuevos.». Se corrigió que ambas acciones perdían su aviso al desmontarse la pantalla (`mutateAsync`) | **419/419 pasan**; typecheck y Vitest (49) pasan |
 | 2026-10-31 | GitHub Actions, run 41265968428, commit `068e9d2` | «Tipos, Vitest y build» y «Migraciones y pgTAP» (con `011_medidas_imagenes_lote`) + concurrencia | **Pasan todos los pasos** |
