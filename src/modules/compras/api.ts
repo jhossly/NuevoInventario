@@ -319,6 +319,10 @@ export const esquemaUtilidad = z.object({
   utilidad: z.string(),
   margen: z.string().nullable(),
   sin_precio: z.number(),
+  // Solo antes de guardar: lo que costaría la compra con lo recibido.
+  compra: z
+    .object({ subtotal: decimal, descuento: decimal, iva: decimal, otros: decimal, total: decimal, total_factura: decimal })
+    .optional(),
 });
 export type Utilidad = z.infer<typeof esquemaUtilidad>;
 export type UtilidadLinea = z.infer<typeof esquemaUtilidadLinea>;

@@ -8,7 +8,7 @@ import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
-import { LineaUtilidad, ResumenUtilidad } from './UtilidadCompra';
+import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
 import {
   useEstimarUtilidad,
   useLeerFactura,
@@ -338,6 +338,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
         })}
       </ol>
 
+      {estimacion.data?.compra && <TotalCompra compra={estimacion.data.compra} />}
       {estimacion.data && <ResumenUtilidad utilidad={estimacion.data} className="mb-4" />}
 
       {error && (

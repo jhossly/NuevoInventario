@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(11);
+select plan(13);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000a001', 'dueno.a@prueba.test'),
@@ -81,6 +81,20 @@ select results_eq(
   'U2. Totales de la compra');
 
 select is((select count(*)::int from public.compras), 0, 'U3. Estimar no guarda nada');
+
+select results_eq(
+  $$ select r ->> 'subtotal', r ->> 'iva', r ->> 'otros', r ->> 'total', r ->> 'total_factura'
+       from (select current_setting('prueba.e')::jsonb -> 'data' -> 'compra' r) x $$,
+  $$ values ('44.00'::text, '3.60'::text, '0.00'::text, '47.60'::text, '47.60'::text) $$,
+  'T1. El total de la compra antes de guardar');
+
+select results_eq(
+  $$ select r ->> 'total', r ->> 'total_factura'
+       from (select public.estimar_utilidad_factura(current_setting('prueba.x'), jsonb_build_array(
+               jsonb_build_object('orden', 1, 'cantidad_recibida', '1', 'factor', '6', 'producto_id', current_setting('prueba.aceite')),
+               jsonb_build_object('orden', 2, 'cantidad_recibida', '0'))) -> 'data' -> 'compra' r) x $$,
+  $$ values ('13.80'::text, '47.60'::text) $$,
+  'T2. Con lo recibido: llegó 1 de 2 cajas y el saco no llegó');
 
 select results_eq(
   $$ select r ->> 'sin_precio', r ->> 'utilidad'
