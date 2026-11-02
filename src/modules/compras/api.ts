@@ -298,3 +298,44 @@ export function useRegistrarCompraXml() {
     onSuccess: invalidar,
   });
 }
+
+// -----------------------------------------------------------------------------
+// Utilidad estimada (D-058)
+// -----------------------------------------------------------------------------
+const esquemaUtilidadLinea = z.object({
+  orden: z.number(),
+  nombre: z.string(),
+  cantidad: decimal,
+  costo_unidad: decimal,
+  venta_unidad: decimal.nullable(),
+  utilidad: z.string().nullable(),
+  margen: z.string().nullable(),
+});
+
+export const esquemaUtilidad = z.object({
+  lineas: z.array(esquemaUtilidadLinea),
+  costo: decimal,
+  venta: decimal,
+  utilidad: z.string(),
+  margen: z.string().nullable(),
+  sin_precio: z.number(),
+});
+export type Utilidad = z.infer<typeof esquemaUtilidad>;
+export type UtilidadLinea = z.infer<typeof esquemaUtilidadLinea>;
+
+export function useEstimarUtilidad(xml: string, lineas: LineaRevisada[] | null) {
+  return useQuery({
+    queryKey: ['compras', 'estimar', xml.length, lineas],
+    queryFn: () => llamar('estimar_utilidad_factura', { p_xml: xml, p_lineas: lineas }, esquemaUtilidad),
+    enabled: lineas !== null,
+    placeholderData: (anterior) => anterior,
+    retry: false,
+  });
+}
+
+export function useUtilidadCompra(compraId: string) {
+  return useQuery({
+    queryKey: ['compras', compraId, 'utilidad'],
+    queryFn: () => llamar('utilidad_estimada_compra', { p_compra_id: compraId }, esquemaUtilidad),
+  });
+}

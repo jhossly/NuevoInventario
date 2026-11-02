@@ -1,9 +1,10 @@
+import { ResumenUtilidad } from './UtilidadCompra';
 import { useState } from 'react';
 import { unidadCorta } from '@/modules/catalogo/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
-import { formatearFecha, useAnularCompra, useCompra, type Compra } from './api';
+import { formatearFecha, useAnularCompra, useCompra, useUtilidadCompra, type Compra } from './api';
 
 export function DetalleCompra({ id }: { id: string }) {
   const compra = useCompra(id);
@@ -98,9 +99,16 @@ function Detalle({ compra, volver }: { compra: Compra; volver: string }) {
         )}
       </Tarjeta>
 
+      {!anulada && <UtilidadDeCompra id={compra.id} />}
       {!anulada && <Anular id={compra.id} />}
     </>
   );
+}
+
+function UtilidadDeCompra({ id }: { id: string }) {
+  const utilidad = useUtilidadCompra(id);
+  if (!utilidad.data) return null;
+  return <ResumenUtilidad utilidad={utilidad.data} className="mb-4" />;
 }
 
 function Anular({ id }: { id: string }) {

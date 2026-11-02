@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Check, PackagePlus, PackageSearch, Upload } from 'lucide-react';
 import { unidadCorta, useMedidas, useProductos } from '@/modules/catalogo/api';
 import { ElegirProducto } from '@/modules/catalogo/ElegirProducto';
@@ -8,7 +8,26 @@ import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
-import { useLeerFactura, useRegistrarCompraXml, type FacturaProveedor, type LineaFactura, type LineaRevisada } from './api';
+import { LineaUtilidad, ResumenUtilidad } from './UtilidadCompra';
+import {
+  useEstimarUtilidad,
+  useLeerFactura,
+  useRegistrarCompraXml,
+  type FacturaProveedor,
+  type LineaFactura,
+  type LineaRevisada,
+} from './api';
+
+/** Espera a que se deje de escribir para no consultar en cada tecla. */
+function useDemorado<T>(valor: T): T {
+  const clave = JSON.stringify(valor);
+  const [demorado, setDemorado] = useState(valor);
+  useEffect(() => {
+    const espera = setTimeout(() => setDemorado(JSON.parse(clave) as T), 500);
+    return () => clearTimeout(espera);
+  }, [clave]);
+  return demorado;
+}
 
 // Kilos por cada medida de peso. Con otras medidas, «Cada una trae» va en esa medida.
 const KILOS: Record<string, number> = { KG: 1, LB: 0.453592 };
@@ -116,8 +135,8 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
 
   const nuevos = lineas.filter((l) => l.modo === 'nuevo' && Number(l.recibida.replace(',', '.')) > 0).length;
 
-  const guardar = () => {
-    setError(null);
+  // Lo revisado, listo para la base; o el motivo por el que aún no lo está.
+  const armar = (): { salida: LineaRevisada[] } | { error: string } => {
     const salida: LineaRevisada[] = [];
     for (const [i, l] of lineas.entries()) {
       const factura_l = factura.lineas[i];
@@ -125,24 +144,24 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
       const nombreLinea = factura_l.descripcion;
       const recibida = leerDecimal(l.recibida, { decimales: 3 });
       const unidades = leerDecimal(l.factor, { decimales: 3, permitirCero: false });
-      if (!recibida.ok) return setError(`${nombreLinea}: ${recibida.mensaje}`);
-      if (!unidades.ok) return setError(`${nombreLinea}: ${unidades.mensaje}`);
+      if (!recibida.ok) return { error: `${nombreLinea}: ${recibida.mensaje}` };
+      if (!unidades.ok) return { error: `${nombreLinea}: ${unidades.mensaje}` };
       if (Number(recibida.valor) === 0) {
         salida.push({ orden: factura_l.orden, cantidad_recibida: '0' });
         continue;
       }
       // 6 decimales: es lo que guarda el factor de una presentación.
       const factor = convertir(Number(unidades.valor), l.medidaTrae, l.unidadBase).toFixed(6);
-      if (Number(factor) <= 0) return setError(`${nombreLinea}: revisa cuánto trae cada una`);
+      if (Number(factor) <= 0) return { error: `${nombreLinea}: revisa cuánto trae cada una` };
       const presentacion = nombreBulto(l, unidades.valor);
       if (l.modo === 'existente') {
-        if (!l.productoId) return setError(`${nombreLinea}: elige el producto`);
+        if (!l.productoId) return { error: `${nombreLinea}: elige el producto` };
         salida.push({ orden: factura_l.orden, cantidad_recibida: recibida.valor, factor, presentacion, producto_id: l.productoId });
         continue;
       }
-      if (l.nombre.trim() === '') return setError(`${nombreLinea}: escribe el nombre`);
+      if (l.nombre.trim() === '') return { error: `${nombreLinea}: escribe el nombre` };
       const precio = l.precio.trim() ? leerDecimal(l.precio, { decimales: 2 }) : null;
-      if (precio && !precio.ok) return setError(`${nombreLinea}: ${precio.mensaje}`);
+      if (precio && !precio.ok) return { error: `${nombreLinea}: ${precio.mensaje}` };
       salida.push({
         orden: factura_l.orden,
         cantidad_recibida: recibida.valor,
@@ -156,6 +175,17 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
         },
       });
     }
+    return { salida };
+  };
+
+  const armadas = armar();
+  const paraEstimar = useDemorado('salida' in armadas ? armadas.salida : null);
+  const estimacion = useEstimarUtilidad(xml, paraEstimar);
+
+  const guardar = () => {
+    setError(null);
+    if ('error' in armadas) return setError(armadas.error);
+    const salida = armadas.salida;
     unaVez((terminar) =>
       registrar.mutate(
         { xml, lineas: salida, clave },
@@ -183,6 +213,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
           const factor = Number(l.factor.replace(',', '.'));
           const entran = recibida * convertir(factor, l.medidaTrae, l.unidadBase);
           const esPeso = Boolean(KILOS[l.unidadBase]);
+          const lineaUtilidad = estimacion.data?.lineas.find((u) => u.orden === x.orden);
           return (
             <li key={x.orden} className="rounded-xl border border-gray-200 bg-white p-3">
               <p className="font-medium">{x.descripcion}</p>
@@ -298,6 +329,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
                   Entran {formatearCantidad(entran.toFixed(3))} {unidadCorta(l.unidadBase)} al stock
                 </p>
               )}
+              {lineaUtilidad && <LineaUtilidad linea={lineaUtilidad} />}
               {recibida !== Number(x.cantidad) && (
                 <p className="text-sm text-amber-800">No coincide con la factura ({formatearCantidad(x.cantidad)})</p>
               )}
@@ -305,6 +337,8 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
           );
         })}
       </ol>
+
+      {estimacion.data && <ResumenUtilidad utilidad={estimacion.data} className="mb-4" />}
 
       {error && (
         <div className="mb-3">
