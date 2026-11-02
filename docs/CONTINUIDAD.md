@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (total de la compra antes de guardar, local; sin subir)
+Última actualización: 2026-11-01 (total de la compra antes de guardar en producción; CI en verde)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con 18 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Falta: `db push --linked` de `20261114000000_total_compra.sql` **antes** de `git push`, cargar datos y usar en paralelo con Excel |
+| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 19 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Datos reales cargándose (48 productos, 8 compras). Falta: terminar de cargar y usar en paralelo con Excel |
 | MVP-2. Facturación electrónica | **Publicada y apagada, en pausa**: el SRI no dio paso al ambiente de pruebas. Se sigue emitiendo en el portal y subiendo los XML |
 
 ## Migraciones
@@ -134,6 +134,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-01 | GitHub Actions, run 41367383105, commit `afff2bf`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia; migración aplicada en Supabase | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Windows 11 del usuario: Supabase local y navegador | Pruebas T1 y T2 en `017`; pantalla: $25,00 completa y $20,00 con 8 de 10 recibidos, con aviso | **515/515 pasan**; Vitest 59/59 |
 | 2026-11-01 | GitHub Actions, run 41366772369, commit `d9a4daf`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia; migración aplicada en Supabase | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Windows 11 del usuario: Supabase local y navegador | `017_utilidad_compra` (11: por línea, totales, sin precio, pérdida, coincide con lo guardado, IVA 0 %, permisos). Pantalla: sin precio, pérdida en rojo y resumen; la compra guardada da lo mismo | **513/513 pasan**; Vitest 59/59 |
