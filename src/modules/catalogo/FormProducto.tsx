@@ -140,8 +140,8 @@ export function FormProducto({
     setSubiendo(true);
     try {
       setImagen(await subirImagenProducto(archivo, contexto.empresa_id));
-    } catch {
-      setErrorImagen('No se pudo subir la imagen');
+    } catch (e) {
+      setErrorImagen(e instanceof Error ? e.message : 'No se pudo subir la imagen');
     }
     setSubiendo(false);
   };
@@ -185,6 +185,9 @@ export function FormProducto({
         </div>
       </div>
       {errorImagen && <Aviso>{errorImagen}</Aviso>}
+      {editando && imagen !== (producto?.imagen ?? null) && (
+        <p className="text-sm text-amber-800">Pulsa «Guardar cambios» para que la foto quede en el producto.</p>
+      )}
 
       <Campo
         etiqueta="Nombre"

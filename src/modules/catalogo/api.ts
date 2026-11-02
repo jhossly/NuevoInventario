@@ -284,12 +284,17 @@ export function useEliminarMedida() {
 
 /** Reduce la foto y la sube a la carpeta de la bodega; devuelve su ruta. */
 export async function subirImagenProducto(archivo: File, empresaId: string): Promise<string> {
-  const lienzo = await reducirImagen(archivo, 400);
-  const contenido = await new Promise<Blob | null>((listo) => lienzo.toBlob(listo, 'image/webp', 0.8));
-  if (!contenido) throw new Error('No se pudo leer la imagen');
+  let contenido: Blob | null = null;
+  try {
+    const lienzo = await reducirImagen(archivo, 400);
+    contenido = await new Promise<Blob | null>((listo) => lienzo.toBlob(listo, 'image/webp', 0.8));
+  } catch {
+    // Pasa con formatos que el navegador no abre, como HEIC de iPhone.
+  }
+  if (!contenido) throw new Error('No se pudo leer esa imagen: usa una foto JPG o PNG');
   const ruta = `${empresaId}/${crypto.randomUUID()}.webp`;
   const { error } = await supabase.storage.from(DEPOSITO).upload(ruta, contenido, { contentType: contenido.type });
-  if (error) throw new Error('No se pudo subir la imagen');
+  if (error) throw new Error(`No se pudo subir la imagen: ${error.message}`);
   return ruta;
 }
 
