@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-01 (fotos: en producción hay 0 archivos; se muestra el motivo real para diagnosticar; sin subir)
+Última actualización: 2026-11-02 (fotos: mensaje con el motivo real publicado; falta que el dueño reporte lo que dice)
 
 ---
 
@@ -134,6 +134,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-02 | GitHub Actions, run 41511868912, commit `59d5a1c`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos**; el despliegue de Vercel terminó bien |
 | 2026-11-01 | Supabase real, solo lectura y simulación revertida | Fotos: 0 productos con imagen y 0 archivos en el depósito; depósito público y política correctos; el insert como Dueño pasa. El motivo no se pudo ver desde aquí: la pantalla ahora muestra el error real y avisa de formatos como HEIC | **Sin resolver**: falta el mensaje que vea el dueño |
 | 2026-11-01 | GitHub Actions, run 41367383105, commit `afff2bf`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia; migración aplicada en Supabase | **Pasan todos los pasos**; el despliegue de Vercel terminó bien. No se abrió la página publicada |
 | 2026-11-01 | Windows 11 del usuario: Supabase local y navegador | Pruebas T1 y T2 en `017`; pantalla: $25,00 completa y $20,00 con 8 de 10 recibidos, con aviso | **515/515 pasan**; Vitest 59/59 |
