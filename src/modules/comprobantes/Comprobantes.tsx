@@ -7,6 +7,7 @@ import { formatearMomento } from '@/modules/ventas/api';
 import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
+import { ArchivoNoXml, leerXml } from '@/shared/xml';
 import { FilePlus2, Layers, Link2, PackagePlus, Trash2, Upload } from 'lucide-react';
 import { Aviso, AvisoError, Boton, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
 import {
@@ -63,14 +64,13 @@ export function Comprobantes() {
 
   const subir = async (evento: ChangeEvent<HTMLInputElement>) => {
     const archivos = Array.from(evento.target.files ?? []);
-    evento.target.value = '';
     if (archivos.length === 0) return;
     setImportando(true);
     const salida: Resultado[] = [];
     // Uno por uno: cada archivo es su propia transacción y su propio resultado.
     for (const archivo of archivos) {
       try {
-        const r = await importar.mutateAsync(await archivo.text());
+        const r = await importar.mutateAsync(await leerXml(archivo));
         salida.push({
           archivo: archivo.name,
           ok: true,
@@ -81,9 +81,14 @@ export function Comprobantes() {
               }`,
         });
       } catch (e) {
-        salida.push({ archivo: archivo.name, ok: false, texto: e instanceof ErrorDeNegocio ? e.message : 'no se pudo leer' });
+        salida.push({
+          archivo: archivo.name,
+          ok: false,
+          texto: e instanceof ErrorDeNegocio || e instanceof ArchivoNoXml ? e.message : 'no se pudo leer',
+        });
       }
     }
+    evento.target.value = '';
     setResultados(salida);
     setImportando(false);
   };
@@ -103,7 +108,7 @@ export function Comprobantes() {
         <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
           <Upload className="mr-2 size-5" aria-hidden />
           {importando ? 'Importando…' : 'Subir archivos XML'}
-          <input type="file" accept=".xml,text/xml,application/xml" multiple className="sr-only" onChange={subir} disabled={importando} />
+          <input type="file" accept=".xml,text/xml,application/xml,application/octet-stream,*/*" multiple className="sr-only" onChange={subir} disabled={importando} />
         </label>
         {resultados.length > 0 && (
           <ul className="mt-3 text-sm">

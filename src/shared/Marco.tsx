@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   FileText,
   HandCoins,
+  KeyRound,
   LogOut,
   Menu,
   Package,
@@ -127,6 +128,13 @@ function Salir({ correo, contexto }: { correo: string; contexto: Contexto }) {
     <div className="border-t border-gray-200 pt-3">
       <p className="truncate px-3 text-sm text-gray-500">{correo}</p>
       <p className="mb-1 px-3 text-sm text-gray-500">{contexto.rol === 'DUENO' ? 'Dueño' : 'Vendedor'}</p>
+      <a
+        href={enlace({ nombre: 'mi-clave' })}
+        className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-gray-700 hover:bg-gray-100"
+      >
+        <KeyRound className="size-5" aria-hidden />
+        Cambiar contraseña
+      </a>
       <button
         type="button"
         onClick={() => void cerrarSesion()}

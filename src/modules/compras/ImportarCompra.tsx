@@ -8,6 +8,7 @@ import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { leerXml } from '@/shared/xml';
 import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
 import {
   useEstimarUtilidad,
@@ -70,12 +71,23 @@ const inicial = (l: LineaFactura): Revision => ({
 export function ImportarCompra() {
   const leer = useLeerFactura();
   const [xml, setXml] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
 
   const subir = async (evento: ChangeEvent<HTMLInputElement>) => {
     const archivo = evento.target.files?.[0];
-    evento.target.value = '';
     if (!archivo) return;
-    const texto = await archivo.text();
+    setNombre(archivo.name);
+    setErrorArchivo(null);
+    let texto: string;
+    try {
+      texto = await leerXml(archivo);
+    } catch (e) {
+      setErrorArchivo(e instanceof Error ? e.message : 'No se pudo leer el archivo');
+      return;
+    } finally {
+      evento.target.value = '';
+    }
     setXml(texto);
     leer.mutate(texto);
   };
@@ -92,9 +104,11 @@ export function ImportarCompra() {
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
             <Upload className="size-5" aria-hidden />
             {leer.isPending ? 'Leyendo…' : 'Subir XML'}
-            <input type="file" accept=".xml,text/xml,application/xml" className="sr-only" onChange={subir} disabled={leer.isPending} />
+            <input type="file" accept=".xml,text/xml,application/xml,application/octet-stream,*/*" className="sr-only" onChange={subir} disabled={leer.isPending} />
           </label>
+          {nombre && <p className="mt-2 text-sm text-gray-600">Archivo: {nombre}</p>}
           <div className="mt-3">
+            {errorArchivo && <Aviso>{errorArchivo}</Aviso>}
             <AvisoError error={leer.error} />
           </div>
         </Tarjeta>

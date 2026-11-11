@@ -26,19 +26,24 @@ export type EstadoSesion =
   | { estado: 'sin-sesion' }
   | { estado: 'sin-empresa'; correo: string }
   | { estado: 'error'; mensaje: string }
-  | { estado: 'lista'; correo: string; contexto: Contexto };
+  | { estado: 'lista'; correo: string; contexto: Contexto }
+  | { estado: 'nueva-clave'; terminar: () => void };
 
 const SesionContexto = createContext<EstadoSesion>({ estado: 'cargando' });
 
 export function SesionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [sesion, setSesion] = useState<Session | null | undefined>(undefined);
+  // Vino por el enlace de «Olvidé mi contraseña»: primero se pide la nueva.
+  const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => setSesion(data.session));
     const { data } = supabase.auth.onAuthStateChange((evento, nueva) => {
       // Al cambiar de usuario no debe quedar nada del anterior en caché.
       if (evento === 'SIGNED_OUT' || evento === 'SIGNED_IN') queryClient.clear();
+      if (evento === 'PASSWORD_RECOVERY') setRecuperando(true);
+      if (evento === 'SIGNED_OUT') setRecuperando(false);
       setSesion(nueva);
     });
     return () => data.subscription.unsubscribe();
@@ -56,6 +61,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   let estado: EstadoSesion;
   if (sesion === undefined) estado = { estado: 'cargando' };
   else if (sesion === null) estado = { estado: 'sin-sesion' };
+  else if (recuperando) estado = { estado: 'nueva-clave', terminar: () => setRecuperando(false) };
   else if (contexto.isPending) estado = { estado: 'cargando' };
   else if (contexto.isError) {
     const error = contexto.error;

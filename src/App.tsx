@@ -21,7 +21,7 @@ import { ListaProductos } from '@/modules/catalogo/ListaProductos';
 import { Conteo } from '@/modules/inventario/Conteo';
 import { PantallaAjuste } from '@/modules/inventario/FormAjuste';
 import { Kardex } from '@/modules/inventario/Kardex';
-import { PantallaIngreso } from '@/modules/sesion/PantallaIngreso';
+import { NuevaClave, PantallaIngreso } from '@/modules/sesion/PantallaIngreso';
 import { cerrarSesion, useSesion } from '@/modules/sesion/sesion';
 import { enlace, useRuta, type Ruta } from '@/shared/ruta';
 import { Marco } from '@/shared/Marco';
@@ -36,6 +36,13 @@ export function App() {
       return <Cargando />;
     case 'sin-sesion':
       return <PantallaIngreso />;
+    case 'nueva-clave':
+      return (
+        <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-4">
+          <h1 className="text-2xl font-bold">Pon tu contraseña nueva</h1>
+          <NuevaClave alTerminar={sesion.terminar} />
+        </main>
+      );
     case 'sin-empresa':
       return (
         <main className="mx-auto max-w-md p-4">
@@ -123,6 +130,15 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
       return soloDueno(<MiNegocio />);
     case 'medidas':
       return soloDueno(<Medidas />);
+    case 'mi-clave':
+      return (
+        <>
+          <Encabezado titulo="Cambiar contraseña" />
+          <Tarjeta>
+            <NuevaClave />
+          </Tarjeta>
+        </>
+      );
     case 'factura':
       return <Ride ventaId={ruta.id} />;
     case 'no-encontrada':

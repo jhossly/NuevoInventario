@@ -27,6 +27,7 @@ export type Ruta =
   | { nombre: 'iva-ventas' }
   | { nombre: 'mi-negocio' }
   | { nombre: 'medidas' }
+  | { nombre: 'mi-clave' }
   | { nombre: 'factura'; id: string }
   | { nombre: 'no-encontrada' };
 
@@ -50,6 +51,7 @@ export function leerRuta(hash: string): Ruta {
   if (primera === 'iva-ventas' && segunda === undefined) return { nombre: 'iva-ventas' };
   if (primera === 'mi-negocio' && segunda === undefined) return { nombre: 'mi-negocio' };
   if (primera === 'medidas' && segunda === undefined) return { nombre: 'medidas' };
+  if (primera === 'mi-clave' && segunda === undefined) return { nombre: 'mi-clave' };
   if (primera === 'factura') {
     if (tercera !== undefined || !segunda || !UUID.test(segunda)) return { nombre: 'no-encontrada' };
     return { nombre: 'factura', id: segunda };
@@ -123,6 +125,8 @@ export function enlace(ruta: Ruta): string {
       return '#/mi-negocio';
     case 'medidas':
       return '#/medidas';
+    case 'mi-clave':
+      return '#/mi-clave';
     case 'factura':
       return `#/factura/${ruta.id}`;
   }
