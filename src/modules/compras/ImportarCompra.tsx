@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import { Check, PackagePlus, PackageSearch, Upload } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, PackagePlus, PackageSearch } from 'lucide-react';
 import { unidadCorta, useMedidas, useProductos } from '@/modules/catalogo/api';
 import { ElegirProducto } from '@/modules/catalogo/ElegirProducto';
 import { leerDecimal } from '@/shared/decimal';
@@ -9,6 +9,7 @@ import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { leerXml } from '@/shared/xml';
+import { ElegirArchivo } from '@/shared/ElegirArchivo';
 import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
 import {
   useEstimarUtilidad,
@@ -71,22 +72,18 @@ const inicial = (l: LineaFactura): Revision => ({
 export function ImportarCompra() {
   const leer = useLeerFactura();
   const [xml, setXml] = useState('');
-  const [nombre, setNombre] = useState('');
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
 
-  const subir = async (evento: ChangeEvent<HTMLInputElement>) => {
-    const archivo = evento.target.files?.[0];
+  const subir = async ([archivo]: File[]) => {
     if (!archivo) return;
-    setNombre(archivo.name);
     setErrorArchivo(null);
+    leer.reset();
     let texto: string;
     try {
       texto = await leerXml(archivo);
     } catch (e) {
       setErrorArchivo(e instanceof Error ? e.message : 'No se pudo leer el archivo');
       return;
-    } finally {
-      evento.target.value = '';
     }
     setXml(texto);
     leer.mutate(texto);
@@ -101,12 +98,7 @@ export function ImportarCompra() {
             Sube el XML de la factura de tu proveedor. Antes de guardar podrás revisar cada producto y corregir lo que de
             verdad llegó.
           </p>
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
-            <Upload className="size-5" aria-hidden />
-            {leer.isPending ? 'Leyendo…' : 'Subir XML'}
-            <input type="file" accept=".xml,text/xml,application/xml,application/octet-stream,*/*" className="sr-only" onChange={subir} disabled={leer.isPending} />
-          </label>
-          {nombre && <p className="mt-2 text-sm text-gray-600">Archivo: {nombre}</p>}
+          <ElegirArchivo etiqueta="Subir XML" ocupado={leer.isPending ? 'Leyendo…' : undefined} alElegir={subir} />
           <div className="mt-3">
             {errorArchivo && <Aviso>{errorArchivo}</Aviso>}
             <AvisoError error={leer.error} />
@@ -213,7 +205,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
       <Tarjeta className="mb-4">
         <p className="font-semibold">{factura.razon_social}</p>
         <p className="text-sm text-gray-600">
-          Factura {factura.numero} · {factura.fecha} · {factura.lineas.length} líneas
+          Factura {factura.numero} · {factura.fecha} · {factura.lineas.length === 1 ? '1 línea' : `${factura.lineas.length} líneas`}
         </p>
         <p className="mt-1 text-xl font-bold tabular-nums">{formatearDinero(factura.total)}</p>
         {!factura.proveedor_id && <p className="text-sm text-emerald-800">Proveedor nuevo: se guardará con esta compra.</p>}

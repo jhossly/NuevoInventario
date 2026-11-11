@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { FormProducto } from '@/modules/catalogo/FormProducto';
 import { useProductos } from '@/modules/catalogo/api';
 import { ElegirProducto } from '@/modules/catalogo/ElegirProducto';
@@ -8,7 +8,8 @@ import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { ArchivoNoXml, leerXml } from '@/shared/xml';
-import { FilePlus2, Layers, Link2, PackagePlus, Trash2, Upload } from 'lucide-react';
+import { ElegirArchivo } from '@/shared/ElegirArchivo';
+import { FilePlus2, Layers, Link2, PackagePlus, Trash2 } from 'lucide-react';
 import { Aviso, AvisoError, Boton, Cargando, Casilla, Encabezado, Tarjeta } from '@/shared/ui';
 import {
   presentacionBaseDe,
@@ -62,8 +63,7 @@ export function Comprobantes() {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [mensajeLote, setMensajeLote] = useState<string | null>(null);
 
-  const subir = async (evento: ChangeEvent<HTMLInputElement>) => {
-    const archivos = Array.from(evento.target.files ?? []);
+  const subir = async (archivos: File[]) => {
     if (archivos.length === 0) return;
     setImportando(true);
     const salida: Resultado[] = [];
@@ -88,7 +88,6 @@ export function Comprobantes() {
         });
       }
     }
-    evento.target.value = '';
     setResultados(salida);
     setImportando(false);
   };
@@ -105,11 +104,7 @@ export function Comprobantes() {
           Descarga del portal del SRI los XML de las facturas que emitiste y súbelos aquí. Cada factura se une a la venta que
           ya registraste en «Vender» o, si no la registraste, crea la venta y descuenta el stock.
         </p>
-        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-emerald-700 px-4 font-medium text-white hover:bg-emerald-800">
-          <Upload className="mr-2 size-5" aria-hidden />
-          {importando ? 'Importando…' : 'Subir archivos XML'}
-          <input type="file" accept=".xml,text/xml,application/xml,application/octet-stream,*/*" multiple className="sr-only" onChange={subir} disabled={importando} />
-        </label>
+        <ElegirArchivo etiqueta="Subir archivos XML" ocupado={importando ? 'Importando…' : undefined} multiple alElegir={subir} />
         {resultados.length > 0 && (
           <ul className="mt-3 text-sm">
             {resultados.map((r, i) => (

@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-10 (recuperar contraseña y XML desde el celular publicados; falta configurar URL y SMTP en Supabase)
+Última actualización: 2026-11-10 (selector de archivos que avisa qué pasó en el celular; publicado)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-060). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-061). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -134,6 +134,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-10 | Navegador local a 375 px | Selector de archivos: sin archivo → «El celular no entregó ningún archivo…»; recarga durante la elección → aviso de memoria; XML sin tipo → revisión | **Funciona**. Sin probar en el celular del dueño |
 | 2026-11-10 | GitHub Actions, run 42951684731, commit `d885508`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos**; el despliegue de Vercel terminó bien |
 | 2026-11-10 | Navegador local + buzón de prueba | Clave equivocada → «Correo o contraseña incorrectos»; «¿Olvidaste tu contraseña?» envía el correo, el enlace abre «Pon tu contraseña nueva», valida que coincidan y entra. `xml.test.ts` (3): acepta XML sin tipo y con BOM, rechaza PDF, vacío y otros | **Funciona**; Vitest 62/62. En producción falta configurar en Supabase la URL de la página y un SMTP propio |
 | 2026-11-02 | GitHub Actions, run 41511868912, commit `59d5a1c`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos**; el despliegue de Vercel terminó bien |
