@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -36,12 +36,21 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Session | null | undefined>(undefined);
   // Vino por el enlace de «Olvidé mi contraseña»: primero se pide la nueva.
   const [recuperando, setRecuperando] = useState(false);
+  const usuarioAnterior = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => setSesion(data.session));
+    void supabase.auth.getSession().then(({ data }) => {
+      usuarioAnterior.current = data.session?.user.id ?? null;
+      setSesion(data.session);
+    });
     const { data } = supabase.auth.onAuthStateChange((evento, nueva) => {
-      // Al cambiar de usuario no debe quedar nada del anterior en caché.
-      if (evento === 'SIGNED_OUT' || evento === 'SIGNED_IN') queryClient.clear();
+      // Al cambiar de usuario no debe quedar nada del anterior en caché. Ojo:
+      // Supabase repite SIGNED_IN al volver a la pestaña (y al volver del
+      // selector de archivos del celular) con el mismo usuario; limpiar ahí
+      // reiniciaba la pantalla y se perdía lo escrito.
+      const id = nueva?.user.id ?? null;
+      if (evento === 'SIGNED_OUT' || id !== usuarioAnterior.current) queryClient.clear();
+      usuarioAnterior.current = id;
       if (evento === 'PASSWORD_RECOVERY') setRecuperando(true);
       if (evento === 'SIGNED_OUT') setRecuperando(false);
       setSesion(nueva);

@@ -54,8 +54,8 @@ export function ElegirArchivo({
     const marca = leerMarca();
     if (marca !== null && Date.now() - marca < VIGENCIA_MS) {
       setAviso(
-        'La página se volvió a abrir mientras elegías el archivo: el celular la cerró para ahorrar memoria. ' +
-          'Cierra otras aplicaciones y vuelve a intentarlo.',
+        'La página se volvió a cargar mientras elegías el archivo y no lo recibió. Vuelve a elegirlo; ' +
+          'si se repite, cierra otras pestañas o aplicaciones.',
       );
     }
     ponerMarca(null);
