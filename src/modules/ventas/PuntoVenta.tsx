@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useBorrador } from '@/shared/borrador';
 import { Banknote, CreditCard, HandCoins, Landmark, type LucideIcon } from 'lucide-react';
 import { unidadCorta, stockDe, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
 import { useCuentasFiado, useResumenCaja } from '@/modules/caja/api';
@@ -66,16 +67,18 @@ export function PuntoVenta() {
   const unaVez = useUnSoloEnvio();
 
   const [busqueda, setBusqueda] = useState('');
-  const [lineas, setLineas] = useState<LineaEnPantalla[]>([]);
-    const [clienteId, setClienteId] = useState('');
+  // El carrito sobrevive a ir a otra pantalla y volver (D-062).
+  const [lineas, setLineas] = useBorrador<LineaEnPantalla[]>('vender:lineas', []);
+  const [clienteId, setClienteId] = useBorrador('vender:cliente', '');
   const [nuevoCliente, setNuevoCliente] = useState(false);
-  const [medio, setMedio] = useState<Medio>('EFECTIVO');
-  const [recibido, setRecibido] = useState('');
-  const [clave, setClave] = useState(nuevaClave);
+  const [medio, setMedio] = useBorrador<Medio>('vender:medio', 'EFECTIVO');
+  const [recibido, setRecibido] = useBorrador('vender:recibido', '');
+  // Si el celular cierra la página justo al cobrar, la misma clave evita cobrar dos veces.
+  const [clave, setClave] = useBorrador('vender:clave', nuevaClave);
   const contexto = useContexto();
   const emitir = useEmitirFactura();
   const tipoInicial: TipoComprobante = contexto.facturacion_activa ? 'FACTURA' : 'NOTA_VENTA';
-  const [tipo, setTipo] = useState<TipoComprobante>(tipoInicial);
+  const [tipo, setTipo] = useBorrador<TipoComprobante>('vender:tipo', tipoInicial);
   const [ultima, setUltima] = useState<{ id: string; total: string; vuelto: string | null } | null>(null);
 
   const opciones = useMemo<Opcion[]>(() => {

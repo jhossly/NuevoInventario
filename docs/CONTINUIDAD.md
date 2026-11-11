@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-10 (selector de archivos que avisa qué pasó en el celular; publicado)
+Última actualización: 2026-11-10 (borradores que no se pierden al cambiar de pantalla; local, sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-061). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-062). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -134,6 +134,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-10 | Navegador local | Compra desde factura: cambiar de pantalla y volver, y recargar, conserva nombre, cantidad y precio con aviso «Seguimos donde lo dejaste»; Cancelar lo borra; el carrito de Vender sigue tras ir a Caja | **Funciona**; Vitest 62/62 |
 | 2026-11-10 | GitHub Actions, run 42953624619, commit `bec0e41`; Vercel | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-10 | Navegador local a 375 px | Selector de archivos: sin archivo → «El celular no entregó ningún archivo…»; recarga durante la elección → aviso de memoria; XML sin tipo → revisión | **Funciona**. Sin probar en el celular del dueño |
 | 2026-11-10 | GitHub Actions, run 42951684731, commit `d885508`; Vercel | «Tipos, Vitest y build» y «Migraciones y pgTAP» + concurrencia | **Pasan todos los pasos**; el despliegue de Vercel terminó bien |

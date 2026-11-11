@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { cerrarSesion, type Contexto } from '@/modules/sesion/sesion';
+import { borrarBorradoresDe } from '@/shared/borrador';
 import { enlace, type Ruta } from '@/shared/ruta';
 import type { Icono } from '@/shared/ui';
 
@@ -137,7 +138,10 @@ function Salir({ correo, contexto }: { correo: string; contexto: Contexto }) {
       </a>
       <button
         type="button"
-        onClick={() => void cerrarSesion()}
+        onClick={() => {
+          borrarBorradoresDe(correo);
+          void cerrarSesion();
+        }}
         className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-gray-700 hover:bg-gray-100"
       >
         <LogOut className="size-5" aria-hidden />

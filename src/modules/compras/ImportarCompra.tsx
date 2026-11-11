@@ -9,6 +9,7 @@ import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { leerXml } from '@/shared/xml';
+import { useBorrador } from '@/shared/borrador';
 import { ElegirArchivo } from '@/shared/ElegirArchivo';
 import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
 import {
@@ -71,7 +72,17 @@ const inicial = (l: LineaFactura): Revision => ({
 /** Registrar una compra desde el XML de la factura del proveedor (D-054). */
 export function ImportarCompra() {
   const leer = useLeerFactura();
-  const [xml, setXml] = useState('');
+  const [xml, setXml, borrarXml] = useBorrador('compra-xml', '');
+  const [recuperada, setRecuperada] = useState(false);
+
+  // Al volver a la pantalla, se vuelve a leer la factura que se estaba revisando.
+  useEffect(() => {
+    if (xml && !leer.data && !leer.isPending) {
+      setRecuperada(true);
+      leer.mutate(xml, { onError: () => borrarXml() });
+    }
+    // Solo al abrir la pantalla.
+  }, []);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
 
   const subir = async ([archivo]: File[]) => {
@@ -105,7 +116,22 @@ export function ImportarCompra() {
           </div>
         </Tarjeta>
       )}
-      {leer.data && <Revisar xml={xml} factura={leer.data} alCancelar={() => leer.reset()} />}
+      {leer.data && recuperada && (
+        <div className="mb-3">
+          <Aviso tipo="info">Seguimos donde lo dejaste: esta factura aún no se guarda.</Aviso>
+        </div>
+      )}
+      {leer.data && (
+        <Revisar
+          xml={xml}
+          factura={leer.data}
+          alTerminar={() => {
+            borrarXml();
+            setRecuperada(false);
+            leer.reset();
+          }}
+        />
+      )}
     </>
   );
 }
@@ -118,13 +144,21 @@ function nombreBulto(l: Revision, trae: string): string | undefined {
   return texto ? `Saco ${cantidad} ${texto}` : `Caja ${cantidad}`;
 }
 
-function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaProveedor; alCancelar: () => void }) {
+function Revisar({ xml, factura, alTerminar }: { xml: string; factura: FacturaProveedor; alTerminar: () => void }) {
   const productos = useProductos();
   const medidas = useMedidas();
   const registrar = useRegistrarCompraXml();
   const unaVez = useUnSoloEnvio();
-  const [clave] = useState(nuevaClave);
-  const [lineas, setLineas] = useState(() => factura.lineas.map(inicial));
+  // Clave y revisión quedan con la factura: si el celular cierra la página, se retoma igual.
+  const id = `${factura.ruc}-${factura.numero}`;
+  const [clave, , borrarClave] = useBorrador(`compra-xml-clave:${id}`, nuevaClave);
+  const [guardadas, setLineas, borrarLineas] = useBorrador(`compra-xml-lineas:${id}`, () => factura.lineas.map(inicial));
+  const lineas = guardadas.length === factura.lineas.length ? guardadas : factura.lineas.map(inicial);
+  const terminar = () => {
+    borrarClave();
+    borrarLineas();
+    alTerminar();
+  };
   const [error, setError] = useState<string | null>(null);
 
   const opciones = useMemo(
@@ -192,10 +226,16 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
     setError(null);
     if ('error' in armadas) return setError(armadas.error);
     const salida = armadas.salida;
-    unaVez((terminar) =>
+    unaVez((listo) =>
       registrar.mutate(
         { xml, lineas: salida, clave },
-        { onSuccess: (r) => navegar({ nombre: 'compra', id: r.compra_id }), onSettled: terminar },
+        {
+          onSuccess: (r) => {
+            terminar();
+            navegar({ nombre: 'compra', id: r.compra_id });
+          },
+          onSettled: listo,
+        },
       ),
     );
   };
@@ -359,7 +399,7 @@ function Revisar({ xml, factura, alCancelar }: { xml: string; factura: FacturaPr
         <Boton icono={Check} disabled={registrar.isPending} onClick={guardar}>
           {registrar.isPending ? 'Guardando…' : nuevos > 0 ? `Guardar compra y ${nuevos} producto${nuevos === 1 ? '' : 's'}` : 'Guardar compra'}
         </Boton>
-        <Boton variante="secundario" onClick={alCancelar}>
+        <Boton variante="secundario" onClick={terminar}>
           Cancelar
         </Boton>
       </div>

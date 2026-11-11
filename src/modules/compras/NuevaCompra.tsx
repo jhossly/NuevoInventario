@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useBorrador } from '@/shared/borrador';
 import { unidadCorta, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal } from '@/shared/decimal';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
@@ -55,17 +56,19 @@ export function NuevaCompra() {
   const registrar = useRegistrarCompra();
   const unaVez = useUnSoloEnvio();
 
-  const [conRespaldo, setConRespaldo] = useState(true);
-  const [proveedorId, setProveedorId] = useState('');
-  const [numero, setNumero] = useState('');
-  const [fecha, setFecha] = useState(hoy);
-  const [lineas, setLineas] = useState<LineaEnPantalla[]>([]);
+  // Lo escrito queda en el aparato hasta guardar (D-062).
+  const [conRespaldo, setConRespaldo, borrar1] = useBorrador('compra:respaldo', true);
+  const [proveedorId, setProveedorId, borrar2] = useBorrador('compra:proveedor', '');
+  const [numero, setNumero, borrar3] = useBorrador('compra:numero', '');
+  const [fecha, setFecha, borrar4] = useBorrador('compra:fecha', hoy);
+  const [lineas, setLineas, borrar5] = useBorrador<LineaEnPantalla[]>('compra:lineas', []);
   const [busqueda, setBusqueda] = useState('');
   const [nuevoProveedor, setNuevoProveedor] = useState(false);
   const [mostrarErrores, setMostrarErrores] = useState(false);
   const [errorCabecera, setErrorCabecera] = useState<string | null>(null);
   // Una clave por compra: un reintento tras un corte de red no la duplica.
-  const [clave] = useState(nuevaClave);
+  const [clave, , borrar6] = useBorrador('compra:clave', nuevaClave);
+  const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6].forEach((b) => b());
 
   const validadas = lineas.map(validarLinea);
   const todasValidas = lineas.length > 0 && validadas.every((v) => v.linea !== null);
@@ -115,7 +118,13 @@ export function NuevaCompra() {
         lineas: paraEnviar,
         clave,
       },
-      { onSuccess: (r) => navegar({ nombre: 'compra', id: r.compra_id }), onSettled: terminar },
+      {
+        onSuccess: (r) => {
+          borrarTodo();
+          navegar({ nombre: 'compra', id: r.compra_id });
+        },
+        onSettled: terminar,
+      },
     ));
   };
 
