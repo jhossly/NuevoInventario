@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-11 (borradores y pantalla que no se reinicia al volver a la pestaña, D-063; publicado)
+Última actualización: 2026-11-12 (IVA elegido por línea en la compra a mano, D-064; publicado)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-063). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-064). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 19 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Datos reales cargándose (48 productos, 8 compras). Falta: terminar de cargar y usar en paralelo con Excel |
+| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 20 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Datos reales cargándose (48 productos, 8 compras). Falta: terminar de cargar y usar en paralelo con Excel |
 | MVP-2. Facturación electrónica | **Publicada y apagada, en pausa**: el SRI no dio paso al ambiente de pruebas. Se sigue emitiendo en el portal y subiendo los XML |
 
 ## Migraciones
@@ -73,6 +73,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261112000000_filtros_y_bultos.sql` | Expuesta, solo Dueño: `proveedores_de_productos`. Nueva `registrar_compra_de_factura` con clave `presentacion` por línea |
 | `20261113000000_utilidad_compra.sql` | Expuestas, solo Dueño: `estimar_utilidad_factura`, `utilidad_estimada_compra` |
 | `20261114000000_total_compra.sql` | `estimar_utilidad_factura` devuelve también `compra` (subtotal, descuento, IVA, otros, total y total de la factura) |
+| `20261115000000_iva_por_linea_compra.sql` | `calcular_lineas_compra` acepta `tarifa_iva` por línea: el IVA que cobró el proveedor en la compra a mano (D-064) |
 
 Edge Function `supabase/functions/facturar`: `firma.ts` (XAdES-BES con node-forge), `sri.ts` (SOAP), `index.ts`. Secretos: `FIRMA_P12_BASE64`, `FIRMA_CONTRASENA`. Interfaz: `src/modules/facturacion` (estado en la venta, RIDE imprimible en `#/factura/<venta>`, configuración en Mi negocio); «Vender» emite solo al cobrar con Factura.
 
@@ -134,6 +135,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-12 | pgTAP 018 (8) + navegador local | Arroz (0 %) comprado con «Esta factura trae IVA 15 %»: $10 + IVA $1,50 = $11,50, entran 10 kg a $1,15 y la utilidad usa ese costo; el producto sigue en 0 %. Sin tarifa usa la del producto; tarifa 7 o texto se rechaza | **Funciona**; pgTAP 523/523, Vitest 62/62 |
 | 2026-11-11 | GitHub Actions, run 43070811758, commit `6a248e5`; Vercel | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-11 | Navegador local | Volver a la pestaña (`visibilitychange` en window): Supabase emite SIGNED_IN con el mismo usuario y la pantalla de Vender conserva lo escrito y el mismo elemento (no se vuelve a montar) | **Funciona**; Vitest 62/62. Sin probar en el celular del dueño |
 | 2026-11-10 | Navegador local | Compra desde factura: cambiar de pantalla y volver, y recargar, conserva nombre, cantidad y precio con aviso «Seguimos donde lo dejaste»; Cancelar lo borra; el carrito de Vender sigue tras ir a Caja | **Funciona**; Vitest 62/62 |

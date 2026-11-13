@@ -19,6 +19,19 @@ interface LineaEnPantalla {
   cantidad: string;
   costo: string;
   descuento: string;
+  /** IVA de esta compra (D-064). Falta en borradores viejos: se usa el del producto. */
+  tarifa?: string;
+}
+
+/** Tarifas que se pueden elegir en una compra hoy. */
+const TARIFAS = ['0', '5', '15'];
+
+function tarifaDelProducto(p: Producto): string {
+  return String(Number(p.tarifa_iva));
+}
+
+function tarifaDe(l: LineaEnPantalla): string {
+  return l.tarifa ?? tarifaDelProducto(l.producto);
 }
 
 type Errores = Partial<Record<'cantidad' | 'costo' | 'descuento', string>>;
@@ -39,6 +52,7 @@ function validarLinea(l: LineaEnPantalla): { errores: Errores; linea: LineaCompr
       cantidad: cantidad.valor,
       costo_unitario: costo.valor,
       descuento: descuento.valor,
+      tarifa_iva: tarifaDe(l),
     },
   };
 }
@@ -90,8 +104,24 @@ export function NuevaCompra() {
       .slice(0, 12);
   }, [productos.data, busqueda]);
 
+  // «Esta factura trae IVA 15 %»: marcada si todas las líneas van con 15 %.
+  const todasCon15 = lineas.length > 0 && lineas.every((l) => tarifaDe(l) === '15');
+  const ponerTodasCon15 = (si: boolean) =>
+    setLineas((ls) => ls.map((l) => ({ ...l, tarifa: si ? '15' : tarifaDelProducto(l.producto) })));
+
   const agregar = (producto: Producto, presentacion: Presentacion) => {
-    setLineas((ls) => [...ls, { local: nuevaClave(), producto, presentacion, cantidad: '', costo: '', descuento: '' }]);
+    setLineas((ls) => [
+      ...ls,
+      {
+        local: nuevaClave(),
+        producto,
+        presentacion,
+        cantidad: '',
+        costo: '',
+        descuento: '',
+        tarifa: todasCon15 ? '15' : tarifaDelProducto(producto),
+      },
+    ]);
     setBusqueda('');
   };
 
@@ -190,7 +220,19 @@ export function NuevaCompra() {
 
       <Tarjeta className="mb-4">
         <h2 className="mb-2 font-semibold">Productos</h2>
-        <p className="mb-3 text-sm text-gray-500">Costos por presentación, sin IVA, como vienen en la factura.</p>
+        <p className="mb-3 text-sm text-gray-500">
+          Costos por presentación, sin IVA, como vienen en la factura. El IVA es el que cobró el proveedor: cambiarlo
+          aquí no cambia el producto ni cómo se vende.
+        </p>
+        {lineas.length > 0 && (
+          <div className="mb-3">
+            <Casilla
+              etiqueta="Esta factura trae IVA 15 % en todo"
+              checked={todasCon15}
+              onChange={(e) => ponerTodasCon15(e.target.checked)}
+            />
+          </div>
+        )}
 
         <ol className="flex flex-col gap-3">
           {lineas.map((l, i) => {
@@ -206,7 +248,9 @@ export function NuevaCompra() {
                   <p className="flex-1 font-medium">
                     {l.producto.nombre} — {l.presentacion.nombre}
                     <span className="block text-sm font-normal text-gray-500">
-                      {formatearCantidad(l.presentacion.factor)} {unidad} · IVA {Number(l.producto.tarifa_iva)} %
+                      {formatearCantidad(l.presentacion.factor)} {unidad}
+                      {tarifaDe(l) !== tarifaDelProducto(l.producto) &&
+                        ` · se vende con IVA ${tarifaDelProducto(l.producto)} %`}
                     </span>
                   </p>
                   <Boton
@@ -217,7 +261,7 @@ export function NuevaCompra() {
                     ✕
                   </Boton>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <Campo
                     etiqueta="Cantidad"
                     inputMode="decimal"
@@ -240,6 +284,17 @@ export function NuevaCompra() {
                     onChange={(e) => cambiar(i, { descuento: e.target.value })}
                     error={errores.descuento}
                   />
+                  <Selector
+                    etiqueta="IVA de la compra"
+                    value={tarifaDe(l)}
+                    onChange={(e) => cambiar(i, { tarifa: e.target.value })}
+                  >
+                    {[...new Set([...TARIFAS, tarifaDelProducto(l.producto)])].map((t) => (
+                      <option key={t} value={t}>
+                        {t} %
+                      </option>
+                    ))}
+                  </Selector>
                 </div>
                 {calculada && todasValidas && (
                   <p className="mt-2 text-sm text-gray-600">

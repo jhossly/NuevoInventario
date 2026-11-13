@@ -83,6 +83,8 @@ export interface LineaCompra {
   cantidad: string;
   costo_unitario: string;
   descuento: string;
+  /** IVA que cobró el proveedor en esta línea (D-064); sin él, el del producto. */
+  tarifa_iva?: string;
 }
 
 // -----------------------------------------------------------------------------
