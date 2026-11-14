@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-14 (precio en compras, cuenta con líneas incompletas y búsqueda por código, D-069 y D-070; local, sin subir)
+Última actualización: 2026-11-14 (precio en compras, cuenta con líneas incompletas y búsqueda por código, D-069 y D-070; publicado)
 
 ---
 
@@ -47,7 +47,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | 9. Caja y fiado | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions (con concurrencia) |
 | 10. Reportes y exportación | **Cerrada**: base de datos e interfaz probadas en local y en GitHub Actions |
 | 11. Importar XML del SRI | **Cerrada**: probada en local y en GitHub Actions. **MVP-1 completo** |
-| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 24 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Datos reales cargándose (48 productos, 8 compras). Falta: terminar de cargar y usar en paralelo con Excel |
+| 12. Puesta en producción | **En curso**: proyecto Supabase «Bodega» (`qilckgnarwurqhoviwdn`, us-west-2) con las 25 migraciones y la función `facturar`; página en Vercel (usar el dominio de producción). El negocio no tiene contador: las dudas van al SRI. Datos reales cargándose (48 productos, 8 compras). Falta: terminar de cargar y usar en paralelo con Excel |
 | MVP-2. Facturación electrónica | **Publicada y apagada, en pausa**: el SRI no dio paso al ambiente de pruebas. Se sigue emitiendo en el portal y subiendo los XML |
 
 ## Migraciones
@@ -140,6 +140,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-14 | GitHub Actions, run 43633238671, commit `db7bd57`; Vercel; `db push` de 20261120 | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-14 | pgTAP 023 (7) + navegador local | Con una línea vacía y otra a medias, las completas muestran su cuenta, la vacía dice «Línea vacía…», la otra «falta: bultos» y los totales avisan que no las cuentan. Aceite (hoy $3,45) a $4,00 en la calculadora: 12 × $4,00 = venta; en «Nueva compra» avisa el cambio y al registrar «Unidad» queda en $4,00 | **Funciona**; pgTAP 573/573, Vitest 62/62 |
 | 2026-11-14 | GitHub Actions, run 43629595408, commit `222a41d`; Vercel; `db push` de 20261119 | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-14 | pgTAP 022 (10) + navegador local, escritorio y 375 px | Factura real de confitería con precios con IVA (6 líneas, total $38,26): IVA de la factura 15 % y «Los precios ya incluyen IVA» → subtotal $33,29 + IVA $5,00, «Coincide con el total de la factura» (3 centavos de redondeo del proveedor); cada línea muestra «unidades × precio = venta · costo · ganas»; pasada a «Nueva compra» y registrada con el IVA separado por línea. «acei» en el nombre ofrece Aceite y lo marca «Ya lo tienes» con 12 por bulto | **Funciona**; pgTAP 566/566, Vitest 62/62 |
