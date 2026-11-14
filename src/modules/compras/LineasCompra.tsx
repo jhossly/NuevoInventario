@@ -1,293 +1,100 @@
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { PackagePlus } from 'lucide-react';
-import { unidadCorta, type Presentacion, type Producto } from '@/modules/catalogo/api';
+import { useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { CircleCheck, PackagePlus } from 'lucide-react';
+import { unidadCorta, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal } from '@/shared/decimal';
-import { formatearCantidad } from '@/shared/formato';
+import { formatearCantidad, formatearDinero } from '@/shared/formato';
 import { nuevaClave } from '@/shared/uuid';
-import { Boton, Buscador, Campo, Casilla, Selector } from '@/shared/ui';
-import type { LineaCompra } from './api';
+import { Aviso, Boton, Campo, Casilla, Selector } from '@/shared/ui';
 
-/** Una línea de compra mientras se escribe: en «Nueva compra» y en «¿Cuánto gano?». */
-export interface LineaEnPantalla {
-  /** Solo para la key de React: la misma presentación puede repetirse. */
+/**
+ * Una línea de compra como se escribe en «Nueva compra» y en «¿Cuánto gano?»
+ * (D-068): igual para un producto que ya existe y para uno que aún no.
+ */
+export interface ItemCompra {
   local: string;
-  producto: Producto;
-  presentacion: Presentacion;
+  /** El producto que ya existe; sin él, se crea al registrar la compra (D-067). */
+  productoId?: string;
+  nombre: string;
+  /** Unidades que trae cada bulto. */
+  factor: string;
+  /** Bultos. */
   cantidad: string;
+  /** Precio de un bulto, como viene en la factura. */
   costo: string;
   descuento: string;
-  /** IVA de esta compra (D-064). Falta en borradores viejos: se usa el del producto. */
+  /** IVA de esta línea cuando no es el de la factura. */
   tarifa?: string;
+  /** Precio por unidad al que se venderá un producto nuevo; puede quedar vacío. */
+  precio: string;
 }
 
-export type ErroresLinea = Partial<Record<'cantidad' | 'costo' | 'descuento', string>>;
+/** Lo que vale para toda la factura. */
+export interface OpcionesCompra {
+  /** IVA de la factura: el de cada línea salvo que se cambie. */
+  iva: string;
+  /** Los precios de la factura ya traen el IVA: se separa al calcular. */
+  conIva: boolean;
+  /** Total de la factura, para comparar con lo escrito. */
+  totalFactura: string;
+}
+
+export const OPCIONES_INICIALES: OpcionesCompra = { iva: '15', conIva: false, totalFactura: '' };
+
+export type ErroresItem = Partial<Record<'nombre' | 'factor' | 'cantidad' | 'costo' | 'descuento' | 'precio', string>>;
 
 /** Tarifas que se pueden elegir en una compra hoy. */
 const TARIFAS = ['0', '5', '15'];
 
-export function tarifaDelProducto(p: Producto): string {
-  return String(Number(p.tarifa_iva));
+export function itemVacio(): ItemCompra {
+  return { local: nuevaClave(), nombre: '', factor: '1', cantidad: '', costo: '', descuento: '', precio: '' };
 }
 
-export function tarifaDe(l: LineaEnPantalla): string {
-  return l.tarifa ?? tarifaDelProducto(l.producto);
+export function tarifaDe(item: ItemCompra, opciones: OpcionesCompra): string {
+  return item.tarifa ?? opciones.iva;
 }
 
-export function validarLinea(l: LineaEnPantalla): { errores: ErroresLinea; linea: LineaCompra | null } {
-  const errores: ErroresLinea = {};
-  const cantidad = leerDecimal(l.cantidad, { decimales: 3, permitirCero: false });
-  const costo = leerDecimal(l.costo, { decimales: 6 });
-  const descuento = l.descuento.trim() === '' ? ({ ok: true, valor: '0' } as const) : leerDecimal(l.descuento, { decimales: 2 });
-  if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
-  if (!costo.ok) errores.costo = costo.mensaje;
-  if (!descuento.ok) errores.descuento = descuento.mensaje;
-  if (!cantidad.ok || !costo.ok || !descuento.ok) return { errores, linea: null };
-  return {
-    errores,
-    linea: {
-      presentacion_id: l.presentacion.id,
-      cantidad: cantidad.valor,
-      costo_unitario: costo.valor,
-      descuento: descuento.valor,
-      tarifa_iva: tarifaDe(l),
-    },
-  };
-}
-
-/** Las líneas válidas listas para la base, o null si falta algo. */
-export function lineasParaEnviar(lineas: LineaEnPantalla[]) {
-  const validadas = lineas.map(validarLinea);
-  const todasValidas = lineas.length > 0 && validadas.every((v) => v.linea !== null);
-  return { validadas, todasValidas, paraEnviar: todasValidas ? validadas.map((v) => v.linea as LineaCompra) : null };
+/** Quita el IVA de un precio que lo trae, con 6 decimales. */
+function sinIva(valor: string, tarifa: string, decimales: number): string {
+  return (Number(valor) / (1 + Number(tarifa) / 100)).toFixed(decimales);
 }
 
 /**
- * Productos de una compra: buscar y agregar, cantidad, costo, descuento e IVA
- * de la compra por línea, y la casilla de «IVA 15 % en todo». `debajo` muestra
- * lo calculado de cada línea.
+ * Las líneas para simular_compra o registrar_compra_con_nuevos, o null si
+ * algo falta. Con «precios con IVA», costo y descuento se pasan sin IVA.
  */
-export function EditorLineas({
-  productos,
-  lineas,
-  setLineas,
-  validadas,
-  mostrarErrores,
-  lineaConError,
-  debajo,
-}: {
-  productos: Producto[];
-  lineas: LineaEnPantalla[];
-  setLineas: Dispatch<SetStateAction<LineaEnPantalla[]>>;
-  validadas: { errores: ErroresLinea }[];
-  mostrarErrores: boolean;
-  lineaConError: number;
-  debajo?: (linea: LineaEnPantalla, indice: number) => ReactNode;
-}) {
-  const [busqueda, setBusqueda] = useState('');
-
-  const opciones = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase();
-    if (texto === '') return [];
-    return productos
-      .filter((p) => p.activo && p.nombre.toLowerCase().includes(texto))
-      .flatMap((p) => p.presentaciones.filter((r) => r.activo && r.se_compra).map((r) => ({ producto: p, presentacion: r })))
-      .slice(0, 12);
-  }, [productos, busqueda]);
-
-  // «Esta factura trae IVA 15 %»: marcada si todas las líneas van con 15 %.
-  const todasCon15 = lineas.length > 0 && lineas.every((l) => tarifaDe(l) === '15');
-  const ponerTodasCon15 = (si: boolean) =>
-    setLineas((ls) => ls.map((l) => ({ ...l, tarifa: si ? '15' : tarifaDelProducto(l.producto) })));
-
-  const agregar = (producto: Producto, presentacion: Presentacion) => {
-    setLineas((ls) => [
-      ...ls,
-      {
-        local: nuevaClave(),
-        producto,
-        presentacion,
-        cantidad: '',
-        costo: '',
-        descuento: '',
-        tarifa: todasCon15 ? '15' : tarifaDelProducto(producto),
-      },
-    ]);
-    setBusqueda('');
-  };
-
-  const cambiar = (indice: number, cambios: Partial<LineaEnPantalla>) =>
-    setLineas((ls) => ls.map((l, i) => (i === indice ? { ...l, ...cambios } : l)));
-
-  return (
-    <>
-      <p className="mb-3 text-sm text-gray-500">
-        Costos por presentación, sin IVA, como vienen en la factura. El IVA es el que cobró el proveedor: cambiarlo
-        aquí no cambia el producto ni cómo se vende.
-      </p>
-      {lineas.length > 0 && (
-        <div className="mb-3">
-          <Casilla
-            etiqueta="Esta factura trae IVA 15 % en todo"
-            checked={todasCon15}
-            onChange={(e) => ponerTodasCon15(e.target.checked)}
-          />
-        </div>
-      )}
-
-      <ol className="flex flex-col gap-3">
-        {lineas.map((l, i) => {
-          const errores = mostrarErrores ? (validadas[i]?.errores ?? {}) : {};
-          const unidad = unidadCorta(l.producto.unidad_base);
-          return (
-            <li
-              key={l.local}
-              className={`rounded-lg border p-3 ${lineaConError === i ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
-            >
-              <div className="mb-2 flex items-start gap-2">
-                <p className="flex-1 font-medium">
-                  {l.producto.nombre} — {l.presentacion.nombre}
-                  <span className="block text-sm font-normal text-gray-500">
-                    {formatearCantidad(l.presentacion.factor)} {unidad}
-                    {tarifaDe(l) !== tarifaDelProducto(l.producto) &&
-                      ` · se vende con IVA ${tarifaDelProducto(l.producto)} %`}
-                  </span>
-                </p>
-                <Boton
-                  variante="secundario"
-                  aria-label={`Quitar ${l.producto.nombre}`}
-                  onClick={() => setLineas((ls) => ls.filter((_, j) => j !== i))}
-                >
-                  ✕
-                </Boton>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Campo
-                  etiqueta="Cantidad"
-                  inputMode="decimal"
-                  value={l.cantidad}
-                  onChange={(e) => cambiar(i, { cantidad: e.target.value })}
-                  error={errores.cantidad}
-                />
-                <Campo
-                  etiqueta="Costo c/u"
-                  inputMode="decimal"
-                  value={l.costo}
-                  onChange={(e) => cambiar(i, { costo: e.target.value })}
-                  error={errores.costo}
-                />
-                <Campo
-                  etiqueta="Descuento $"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={l.descuento}
-                  onChange={(e) => cambiar(i, { descuento: e.target.value })}
-                  error={errores.descuento}
-                />
-                <Selector
-                  etiqueta="IVA de la compra"
-                  value={tarifaDe(l)}
-                  onChange={(e) => cambiar(i, { tarifa: e.target.value })}
-                >
-                  {[...new Set([...TARIFAS, tarifaDelProducto(l.producto)])].map((t) => (
-                    <option key={t} value={t}>
-                      {t} %
-                    </option>
-                  ))}
-                </Selector>
-              </div>
-              {debajo?.(l, i)}
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className="mt-3">
-        <Buscador
-          etiqueta="Agregar producto: escribe el nombre"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-        {opciones.length > 0 && (
-          <ul className="mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-            {opciones.map(({ producto, presentacion }) => (
-              <li key={presentacion.id}>
-                <button
-                  type="button"
-                  onClick={() => agregar(producto, presentacion)}
-                  className="flex min-h-11 w-full items-center justify-between px-3 text-left hover:bg-gray-50"
-                >
-                  <span>
-                    {producto.nombre} — {presentacion.nombre}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {formatearCantidad(presentacion.factor)} {unidadCorta(producto.unidad_base)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {busqueda.trim() !== '' && opciones.length === 0 && (
-          <p className="mt-2 text-sm text-gray-500">Ningún producto activo con presentación de compra coincide.</p>
-        )}
-      </div>
-    </>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Productos que aún no están en el catálogo (D-066, D-067)
-// -----------------------------------------------------------------------------
-
-/** Un producto que todavía no existe: se describe a mano. */
-export interface NuevoEnPantalla {
-  local: string;
-  nombre: string;
-  /** Unidades que trae cada bulto. */
-  factor: string;
-  cantidad: string;
-  costo: string;
-  tarifa: string;
-  /** Si la persona cambió el IVA; si no, al pasar a un producto existente se usa el de ese producto. */
-  tarifaElegida?: boolean;
-  /** Precio por unidad al que se venderá; puede quedar vacío. */
-  precio: string;
-}
-
-export type ErroresNuevo = Partial<Record<'nombre' | 'factor' | 'cantidad' | 'costo' | 'precio', string>>;
-
-export function nuevoVacio(): NuevoEnPantalla {
-  return { local: nuevaClave(), nombre: '', factor: '1', cantidad: '', costo: '', tarifa: '0', precio: '' };
-}
-
-/** La línea `nuevo` que entienden simular_compra y registrar_compra_con_nuevos. */
-export function validarNuevo(n: NuevoEnPantalla): { errores: ErroresNuevo; linea: object | null } {
-  const errores: ErroresNuevo = {};
-  const factor = leerDecimal(n.factor, { decimales: 3, permitirCero: false });
-  const cantidad = leerDecimal(n.cantidad, { decimales: 3, permitirCero: false });
-  const costo = leerDecimal(n.costo, { decimales: 6 });
-  const precio = n.precio.trim() === '' ? ({ ok: true, valor: '' } as const) : leerDecimal(n.precio, { decimales: 2 });
-  if (n.nombre.trim() === '') errores.nombre = 'Escribe el nombre';
-  if (!factor.ok) errores.factor = factor.mensaje;
-  if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
-  if (!costo.ok) errores.costo = costo.mensaje;
-  if (!precio.ok) errores.precio = precio.mensaje;
-  if (n.nombre.trim() === '' || !factor.ok || !cantidad.ok || !costo.ok || !precio.ok) return { errores, linea: null };
-  return {
-    errores,
-    linea: {
-      nuevo: { nombre: n.nombre.trim(), factor: factor.valor, precio_venta: precio.valor },
+export function prepararItems(items: ItemCompra[], opciones: OpcionesCompra) {
+  const validados = items.map((it) => {
+    const errores: ErroresItem = {};
+    const factor = leerDecimal(it.factor, { decimales: 3, permitirCero: false });
+    const cantidad = leerDecimal(it.cantidad, { decimales: 3, permitirCero: false });
+    const costo = leerDecimal(it.costo, { decimales: 6 });
+    const descuento =
+      it.descuento.trim() === '' ? ({ ok: true, valor: '0' } as const) : leerDecimal(it.descuento, { decimales: 2 });
+    const precio =
+      it.productoId || it.precio.trim() === '' ? ({ ok: true, valor: '' } as const) : leerDecimal(it.precio, { decimales: 2 });
+    if (!it.productoId && it.nombre.trim() === '') errores.nombre = 'Escribe el nombre';
+    if (!factor.ok) errores.factor = factor.mensaje;
+    if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
+    if (!costo.ok) errores.costo = costo.mensaje;
+    if (!descuento.ok) errores.descuento = descuento.mensaje;
+    if (!precio.ok) errores.precio = precio.mensaje;
+    if (Object.keys(errores).length > 0 || !factor.ok || !cantidad.ok || !costo.ok || !descuento.ok || !precio.ok) {
+      return { errores, linea: null };
+    }
+    const tarifa = tarifaDe(it, opciones);
+    const comunes = {
       cantidad: cantidad.valor,
-      costo_unitario: costo.valor,
-      tarifa_iva: n.tarifa,
-    },
-  };
-}
-
-/** Lo escrito como nuevo, pasado a un producto que ya existe. */
-export function aLineaExistente(n: NuevoEnPantalla, producto: Producto, presentacion: Presentacion): LineaEnPantalla {
-  const tarifa = n.tarifaElegida ? n.tarifa : tarifaDelProducto(producto);
-  return { local: n.local, producto, presentacion, cantidad: n.cantidad, costo: n.costo, descuento: '', tarifa };
+      costo_unitario: opciones.conIva ? sinIva(costo.valor, tarifa, 6) : costo.valor,
+      descuento: opciones.conIva ? sinIva(descuento.valor, tarifa, 2) : descuento.valor,
+      tarifa_iva: tarifa,
+    };
+    const linea = it.productoId
+      ? { producto_id: it.productoId, factor: factor.valor, ...comunes }
+      : { nuevo: { nombre: it.nombre.trim(), factor: factor.valor, precio_venta: precio.valor }, ...comunes };
+    return { errores, linea: linea as object };
+  });
+  const listas = items.length > 0 && validados.every((v) => v.linea !== null);
+  return { validados, lineas: listas ? validados.map((v) => v.linea as object) : null };
 }
 
 /** Compara sin tildes ni mayúsculas. */
@@ -295,38 +102,66 @@ function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
+/** Compara el total escrito de la factura con el calculado. */
+function ComparaTotal({ opciones, total }: { opciones: OpcionesCompra; total?: string }) {
+  const escrito = leerDecimal(opciones.totalFactura, { decimales: 2 });
+  if (opciones.totalFactura.trim() === '' || !escrito.ok || total === undefined) return null;
+  const diferencia = Number(total) - Number(escrito.valor);
+  // Hasta 5 centavos es redondeo (D-056).
+  if (Math.abs(diferencia) <= 0.05) {
+    return (
+      <p className="flex items-center gap-1 text-sm font-medium text-emerald-800">
+        <CircleCheck className="size-4" aria-hidden />
+        Coincide con el total de la factura ({formatearDinero(escrito.valor)}).
+      </p>
+    );
+  }
+  return (
+    <Aviso>
+      La factura dice {formatearDinero(escrito.valor)} y con lo que escribiste da {formatearDinero(total)} (
+      {diferencia > 0 ? 'sobran' : 'faltan'} {formatearDinero(Math.abs(diferencia).toFixed(2))}). Revisa bultos y costos
+      {opciones.conIva
+        ? '.'
+        : '. Si al sumar los precios de la factura te da el total, marca «Los precios ya incluyen IVA».'}
+    </Aviso>
+  );
+}
+
 /**
- * Productos que aún no existen. El nombre busca entre los que ya hay: si se
- * elige uno, la línea pasa a ese producto (`alElegirExistente`); si no, queda
- * escrito como nuevo. `lineaConError` cuenta desde 0 con las líneas de
- * productos existentes primero (`desfase`).
+ * Las líneas de una compra (D-068): el nombre busca entre los productos que ya
+ * hay; si no se elige ninguno, queda como nuevo. Arriba, lo que vale para toda
+ * la factura: su IVA, si los precios ya lo traen y su total para comparar.
  */
-export function EditorNuevos({
+export function EditorCompra({
   productos,
-  nuevos,
-  setNuevos,
-  alElegirExistente,
+  items,
+  setItems,
+  opciones,
+  setOpciones,
   validados,
   mostrarErrores,
   lineaConError,
-  desfase,
+  totalCalculado,
   etiquetaPrecio,
   debajo,
 }: {
   productos: Producto[];
-  nuevos: NuevoEnPantalla[];
-  setNuevos: Dispatch<SetStateAction<NuevoEnPantalla[]>>;
-  alElegirExistente: (indice: number, producto: Producto, presentacion: Presentacion) => void;
-  validados: { errores: ErroresNuevo }[];
+  items: ItemCompra[];
+  setItems: Dispatch<SetStateAction<ItemCompra[]>>;
+  opciones: OpcionesCompra;
+  setOpciones: Dispatch<SetStateAction<OpcionesCompra>>;
+  validados: { errores: ErroresItem }[];
   mostrarErrores: boolean;
+  /** Índice desde 0 de la línea que la base rechazó, o -1. */
   lineaConError: number;
-  desfase: number;
+  totalCalculado?: string;
   etiquetaPrecio: string;
-  debajo?: (nuevo: NuevoEnPantalla, indice: number) => ReactNode;
+  debajo?: (item: ItemCompra, indice: number) => ReactNode;
 }) {
   const [enfocado, setEnfocado] = useState<string | null>(null);
-  const cambiar = (indice: number, cambios: Partial<NuevoEnPantalla>) =>
-    setNuevos((ns) => ns.map((n, i) => (i === indice ? { ...n, ...cambios } : n)));
+  const cambiar = (indice: number, cambios: Partial<ItemCompra>) =>
+    setItems((xs) => xs.map((x, i) => (i === indice ? { ...x, ...cambios } : x)));
+  const porId = new Map(productos.map((p) => [p.id, p]));
 
   const parecidos = (nombre: string) => {
     const texto = normalizar(nombre.trim());
@@ -334,114 +169,201 @@ export function EditorNuevos({
     return productos
       .filter((p) => p.activo && normalizar(p.nombre).includes(texto))
       .flatMap((p) => p.presentaciones.filter((r) => r.activo && r.se_compra).map((r) => ({ producto: p, presentacion: r })))
-      .slice(0, 6);
+      .slice(0, 8);
   };
 
   return (
     <>
+      <div className="mb-4 grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-3">
+        <Selector
+          etiqueta="IVA de la factura"
+          value={opciones.iva}
+          onChange={(e) => {
+            const iva = e.target.value;
+            setOpciones((o) => ({ ...o, iva }));
+            // Cambiar el IVA de la factura lo aplica a todas las líneas.
+            setItems((xs) => xs.map(({ tarifa: _quitada, ...x }) => x));
+          }}
+        >
+          {TARIFAS.map((t) => (
+            <option key={t} value={t}>
+              {t} %
+            </option>
+          ))}
+        </Selector>
+        <Campo
+          etiqueta="Total de la factura (opcional)"
+          inputMode="decimal"
+          placeholder="Para comparar"
+          value={opciones.totalFactura}
+          onChange={(e) => {
+            const totalFactura = e.target.value;
+            setOpciones((o) => ({ ...o, totalFactura }));
+          }}
+        />
+        <div className="flex flex-col justify-end pb-1">
+          <Casilla
+            etiqueta="Los precios ya incluyen IVA"
+            checked={opciones.conIva}
+            onChange={(e) => {
+              const conIva = e.target.checked;
+              setOpciones((o) => ({ ...o, conIva }));
+            }}
+          />
+        </div>
+        <p className="text-xs text-gray-500 sm:col-span-3">
+          Marca «Los precios ya incluyen IVA» si al sumar los precios de la factura te da el total a pagar: así el
+          IVA no se cuenta dos veces.
+        </p>
+      </div>
+
       <ol className="flex flex-col gap-3">
-        {nuevos.map((n, j) => {
-          const errores = mostrarErrores ? (validados[j]?.errores ?? {}) : {};
-          const opciones = enfocado === n.local ? parecidos(n.nombre) : [];
+        {items.map((it, i) => {
+          const errores = mostrarErrores ? (validados[i]?.errores ?? {}) : {};
+          const producto = it.productoId ? porId.get(it.productoId) : undefined;
+          const opcionesNombre = enfocado === it.local && !it.productoId ? parecidos(it.nombre) : [];
+          const tarifa = tarifaDe(it, opciones);
           return (
             <li
-              key={n.local}
-              className={`rounded-lg border p-3 ${lineaConError === desfase + j ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+              key={it.local}
+              className={`rounded-lg border p-3 ${lineaConError === i ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
             >
               <div className="mb-2 flex items-end gap-2">
                 <div className="relative flex-1">
-                  <Campo
-                    etiqueta="Nombre"
-                    placeholder="Ej.: Galletas de coco"
-                    autoComplete="off"
-                    value={n.nombre}
-                    onFocus={() => setEnfocado(n.local)}
-                    // Deja tiempo al toque en una sugerencia antes de cerrarlas.
-                    onBlur={() => setTimeout(() => setEnfocado((e) => (e === n.local ? null : e)), 150)}
-                    onChange={(e) => cambiar(j, { nombre: e.target.value })}
-                    error={errores.nombre}
-                  />
-                  {opciones.length > 0 && (
-                    <ul className="absolute inset-x-0 top-full z-20 mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      <li className="px-3 py-1 text-xs text-gray-500">Ya lo tienes: elígelo para usar ese producto</li>
-                      {opciones.map(({ producto, presentacion }) => (
-                        <li key={presentacion.id}>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setEnfocado(null);
-                              alElegirExistente(j, producto, presentacion);
-                            }}
-                            className="flex min-h-11 w-full items-center justify-between px-3 text-left hover:bg-gray-50"
-                          >
-                            <span>
-                              {producto.nombre} — {presentacion.nombre}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {formatearCantidad(presentacion.factor)} {unidadCorta(producto.unidad_base)}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                  {producto ? (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Producto</p>
+                      <p className="flex min-h-11 flex-wrap items-center gap-2">
+                        <span className="font-medium">{producto.nombre}</span>
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                          Ya lo tienes
+                        </span>
+                        <button
+                          type="button"
+                          className="text-sm text-emerald-800 underline"
+                          onClick={() => cambiar(i, { productoId: undefined })}
+                        >
+                          Cambiar
+                        </button>
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Campo
+                        etiqueta="Producto"
+                        placeholder="Escribe el nombre: si ya lo tienes, aparece"
+                        autoComplete="off"
+                        value={it.nombre}
+                        onFocus={() => setEnfocado(it.local)}
+                        // Deja tiempo al toque en una sugerencia antes de cerrarlas.
+                        onBlur={() => setTimeout(() => setEnfocado((e) => (e === it.local ? null : e)), 150)}
+                        onChange={(e) => cambiar(i, { nombre: e.target.value })}
+                        error={errores.nombre}
+                      />
+                      {it.nombre.trim() !== '' && opcionesNombre.length === 0 && (
+                        <p className="mt-1 text-xs text-amber-800">Nuevo: se crea al registrar la compra.</p>
+                      )}
+                      {opcionesNombre.length > 0 && (
+                        <ul className="absolute inset-x-0 top-full z-20 mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-lg">
+                          <li className="px-3 py-1 text-xs text-gray-500">Ya lo tienes: elígelo para usar ese producto</li>
+                          {opcionesNombre.map(({ producto: p, presentacion: r }) => (
+                            <li key={r.id}>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setEnfocado(null);
+                                  cambiar(i, { productoId: p.id, nombre: p.nombre, factor: String(Number(r.factor)) });
+                                }}
+                                className="flex min-h-11 w-full items-center justify-between px-3 text-left hover:bg-gray-50"
+                              >
+                                <span>
+                                  {p.nombre} — {r.nombre}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  {formatearCantidad(r.factor)} {unidadCorta(p.unidad_base)}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </div>
                 <Boton
                   variante="secundario"
-                  aria-label={`Quitar ${n.nombre || 'producto nuevo'}`}
-                  onClick={() => setNuevos((ns) => ns.filter((_, i) => i !== j))}
+                  aria-label={`Quitar ${it.nombre || 'línea'}`}
+                  onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}
                 >
                   ✕
                 </Boton>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div className={`grid grid-cols-2 gap-2 ${producto ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`}>
                 <Campo
-                  etiqueta="Unidades por bulto"
+                  etiqueta={producto ? `${unidadCorta(producto.unidad_base)} por bulto` : 'Unidades por bulto'}
                   inputMode="decimal"
-                  value={n.factor}
-                  onChange={(e) => cambiar(j, { factor: e.target.value })}
+                  value={it.factor}
+                  onChange={(e) => cambiar(i, { factor: e.target.value })}
                   error={errores.factor}
                 />
                 <Campo
                   etiqueta="Bultos"
                   inputMode="decimal"
-                  value={n.cantidad}
-                  onChange={(e) => cambiar(j, { cantidad: e.target.value })}
+                  value={it.cantidad}
+                  onChange={(e) => cambiar(i, { cantidad: e.target.value })}
                   error={errores.cantidad}
                 />
                 <Campo
-                  etiqueta="Costo del bulto"
+                  etiqueta={opciones.conIva ? 'Costo del bulto (con IVA)' : 'Costo del bulto'}
                   inputMode="decimal"
-                  value={n.costo}
-                  onChange={(e) => cambiar(j, { costo: e.target.value })}
+                  value={it.costo}
+                  onChange={(e) => cambiar(i, { costo: e.target.value })}
                   error={errores.costo}
                 />
-                <Selector etiqueta="IVA de la compra" value={n.tarifa} onChange={(e) => cambiar(j, { tarifa: e.target.value, tarifaElegida: true })}>
+                <Campo
+                  etiqueta="Descuento $"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={it.descuento}
+                  onChange={(e) => cambiar(i, { descuento: e.target.value })}
+                  error={errores.descuento}
+                />
+                <Selector
+                  etiqueta="IVA"
+                  value={tarifa}
+                  onChange={(e) => cambiar(i, { tarifa: e.target.value === opciones.iva ? undefined : e.target.value })}
+                >
                   {TARIFAS.map((t) => (
                     <option key={t} value={t}>
-                      {t} %
+                      {t} %{t === opciones.iva ? ' (factura)' : ''}
                     </option>
                   ))}
                 </Selector>
-                <Campo
-                  etiqueta={etiquetaPrecio}
-                  inputMode="decimal"
-                  placeholder="Opcional"
-                  value={n.precio}
-                  onChange={(e) => cambiar(j, { precio: e.target.value })}
-                  error={errores.precio}
-                />
+                {!producto && (
+                  <Campo
+                    etiqueta={etiquetaPrecio}
+                    inputMode="decimal"
+                    placeholder="Opcional"
+                    value={it.precio}
+                    onChange={(e) => cambiar(i, { precio: e.target.value })}
+                    error={errores.precio}
+                  />
+                )}
               </div>
-              {debajo?.(n, j)}
+              {debajo?.(it, i)}
             </li>
           );
         })}
       </ol>
-      <div className="mt-3">
-        <Boton variante="secundario" icono={PackagePlus} onClick={() => setNuevos((ns) => [...ns, nuevoVacio()])}>
-          Agregar producto que aún no tengo
-        </Boton>
+
+      <div className="mt-3 flex flex-col gap-2">
+        <div>
+          <Boton variante="secundario" icono={PackagePlus} onClick={() => setItems((xs) => [...xs, itemVacio()])}>
+            Agregar producto
+          </Boton>
+        </div>
+        <ComparaTotal opciones={opciones} total={totalCalculado} />
       </div>
     </>
   );

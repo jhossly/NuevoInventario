@@ -27,7 +27,7 @@ select set_config('prueba.aceite_u', (select id::text from public.presentaciones
   where producto_id = current_setting('prueba.aceite')::uuid and factor = 1), true);
 select set_config('prueba.productos', (select count(*)::text from public.productos), true);
 
--- Nuevo va primero en el arreglo, pero responde después del existente.
+-- Nuevo va primero en el arreglo y responde en ese orden (D-068).
 -- Galletas X: 2 bultos de 12 a $6 + 15 % → $13,80; $0,575 c/u.
 -- Precio $0,75 con IVA → $0,6522 sin IVA × 24 = $15,65; utilidad $1,85.
 -- Aceite: 10 × $2,10 + 15 % = $24,15; venta $30; utilidad $5,85.
@@ -40,20 +40,20 @@ select set_config('prueba.r', public.simular_compra(jsonb_build_array(
 select is(current_setting('prueba.r')::jsonb -> 'data' -> 'compra' ->> 'total', '37.95',
   'N1. El total suma el producto nuevo y el existente');
 
-select is(current_setting('prueba.r')::jsonb -> 'data' -> 'lineas' -> 1 ->> 'nombre', 'Galletas X',
-  'N2. El nuevo responde después de los existentes, con su nombre');
+select is(current_setting('prueba.r')::jsonb -> 'data' -> 'lineas' -> 0 ->> 'nombre', 'Galletas X',
+  'N2. Las líneas responden en el orden enviado, con su nombre');
 
-select is(current_setting('prueba.r')::jsonb -> 'data' -> 'lineas' -> 1 ->> 'utilidad', '1.85',
+select is(current_setting('prueba.r')::jsonb -> 'data' -> 'lineas' -> 0 ->> 'utilidad', '1.85',
   'N3. Utilidad del nuevo con el precio que se piensa poner');
 
 select is(current_setting('prueba.r')::jsonb -> 'data' ->> 'utilidad', '7.70',
   'N4. Utilidad total de la compra');
 
 -- 0,575 / 0,80 × 1,15 = 0,8266 → $0,83
-select is(current_setting('prueba.r')::jsonb -> 'data' -> 'detalle' -> 1 ->> 'precio_sugerido', '0.83',
+select is(current_setting('prueba.r')::jsonb -> 'data' -> 'detalle' -> 0 ->> 'precio_sugerido', '0.83',
   'N5. Precio sugerido por unidad para el margen pedido');
 
-select is((current_setting('prueba.r')::jsonb -> 'data' -> 'detalle' -> 1 ->> 'costo_anterior'), null,
+select is((current_setting('prueba.r')::jsonb -> 'data' -> 'detalle' -> 0 ->> 'costo_anterior'), null,
   'N6. Un producto nuevo no tiene costo anterior');
 
 select is((public.simular_compra(jsonb_build_array(

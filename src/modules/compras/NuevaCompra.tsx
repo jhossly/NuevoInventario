@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBorrador } from '@/shared/borrador';
-import { unidadCorta, useProductos } from '@/modules/catalogo/api';
+import { useProductos } from '@/modules/catalogo/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
@@ -8,16 +8,8 @@ import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { FormProveedor } from './Proveedores';
-import { useCalculoCompra, useProveedores, useRegistrarCompra, useSimularCompra } from './api';
-import {
-  aLineaExistente,
-  EditorLineas,
-  EditorNuevos,
-  lineasParaEnviar,
-  validarNuevo,
-  type LineaEnPantalla,
-  type NuevoEnPantalla,
-} from './LineasCompra';
+import { useProveedores, useRegistrarCompra, useSimularCompra } from './api';
+import { EditorCompra, OPCIONES_INICIALES, prepararItems, type ItemCompra, type OpcionesCompra } from './LineasCompra';
 
 function hoy(): string {
   // Fecha local del dispositivo (el Dueño está en Ecuador); la base valida de
@@ -26,10 +18,9 @@ function hoy(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Nombre del borrador de líneas: «¿Cuánto gano?» lo llena al pasar a compra. */
-export const BORRADOR_LINEAS_COMPRA = 'compra:lineas';
-/** Productos que aún no existen: se crean al registrar (D-067). */
-export const BORRADOR_NUEVOS_COMPRA = 'compra:nuevos';
+/** Borradores de las líneas y opciones: «¿Cuánto gano?» los llena al pasar a compra. */
+export const BORRADOR_ITEMS_COMPRA = 'compra:items';
+export const BORRADOR_OPCIONES_COMPRA = 'compra:opciones';
 
 export function NuevaCompra() {
   const productos = useProductos();
@@ -42,8 +33,8 @@ export function NuevaCompra() {
   const [proveedorId, setProveedorId, borrar2] = useBorrador('compra:proveedor', '');
   const [numero, setNumero, borrar3] = useBorrador('compra:numero', '');
   const [fecha, setFecha, borrar4] = useBorrador('compra:fecha', hoy);
-  const [lineas, setLineas, borrar5] = useBorrador<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA, []);
-  const [nuevos, setNuevos, borrar7] = useBorrador<NuevoEnPantalla[]>(BORRADOR_NUEVOS_COMPRA, []);
+  const [items, setItems, borrar5] = useBorrador<ItemCompra[]>(BORRADOR_ITEMS_COMPRA, []);
+  const [opciones, setOpciones, borrar7] = useBorrador<OpcionesCompra>(BORRADOR_OPCIONES_COMPRA, OPCIONES_INICIALES);
   const [nuevoProveedor, setNuevoProveedor] = useState(false);
   const [mostrarErrores, setMostrarErrores] = useState(false);
   const [errorCabecera, setErrorCabecera] = useState<string | null>(null);
@@ -51,23 +42,17 @@ export function NuevaCompra() {
   const [clave, , borrar6] = useBorrador('compra:clave', nuevaClave);
   const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6, borrar7].forEach((b) => b());
 
-  const { validadas, todasValidas, paraEnviar } = lineasParaEnviar(lineas);
-  const nuevosValidados = nuevos.map(validarNuevo);
-  const hayAlgo = lineas.length + nuevos.length > 0;
-  const todoEnviable =
-    hayAlgo && (lineas.length === 0 || todasValidas) && nuevosValidados.every((v) => v.linea !== null)
-      ? [...(paraEnviar ?? []), ...nuevosValidados.map((v) => v.linea as object)]
-      : null;
-  const calculo = useCalculoCompra(nuevos.length === 0 ? paraEnviar : null);
-  // Con productos nuevos los totales salen de la simulación, que los entiende.
-  const simulacion = useSimularCompra(nuevos.length > 0 ? todoEnviable : null, '0.2');
-  const totales = nuevos.length > 0 ? (todoEnviable ? simulacion.data?.compra : undefined) : todasValidas ? calculo.data : undefined;
-  const errorCalculo = nuevos.length > 0 ? simulacion.error : calculo.error;
+  const { validados, lineas } = prepararItems(items, opciones);
+  // Las mismas cuentas del registro, sin guardar: totales y lo que entra por línea.
+  const simulacion = useSimularCompra(lineas, '0.2');
+  const datos = lineas ? simulacion.data : undefined;
 
-  // La base indica en qué línea está el problema (detalle.linea, desde 1),
-  // contando primero los productos que ya existen y luego los nuevos.
-  const conLinea = [registrar.error, errorCalculo].find((e) => e instanceof ErrorDeNegocio) as ErrorDeNegocio | undefined;
+  // La base indica en qué línea está el problema (detalle.linea, desde 1).
+  const conLinea = [registrar.error, simulacion.error].find((e) => e instanceof ErrorDeNegocio) as
+    | ErrorDeNegocio
+    | undefined;
   const lineaConError = conLinea ? Number((conLinea.detalle as { linea?: number } | null)?.linea ?? 0) - 1 : -1;
+  const nuevos = items.filter((it) => !it.productoId).length;
 
   const confirmar = () => {
     setMostrarErrores(true);
@@ -76,8 +61,8 @@ export function NuevaCompra() {
       setErrorCabecera('Con respaldo: elige el proveedor y escribe el número de la factura.');
       return;
     }
-    if (!todoEnviable) {
-      setErrorCabecera(hayAlgo ? 'Revisa las líneas marcadas.' : 'Agrega al menos un producto.');
+    if (!lineas) {
+      setErrorCabecera(items.length === 0 ? 'Agrega al menos un producto.' : 'Revisa las líneas marcadas.');
       return;
     }
     unaVez((terminar) => registrar.mutate(
@@ -86,7 +71,7 @@ export function NuevaCompra() {
         conRespaldo,
         numeroDocumento: numero.trim() || null,
         fecha: fecha || null,
-        lineas: todoEnviable,
+        lineas,
         clave,
       },
       {
@@ -160,70 +145,55 @@ export function NuevaCompra() {
       </Tarjeta>
 
       <Tarjeta className="mb-4">
-        <h2 className="mb-2 font-semibold">Productos</h2>
-        <EditorLineas
+        <h2 className="mb-3 font-semibold">Productos</h2>
+        <EditorCompra
           productos={productos.data ?? []}
-          lineas={lineas}
-          setLineas={setLineas}
-          validadas={validadas}
+          items={items}
+          setItems={setItems}
+          opciones={opciones}
+          setOpciones={setOpciones}
+          validados={validados}
           mostrarErrores={mostrarErrores}
           lineaConError={lineaConError}
-          debajo={(l, i) => {
-            const calculada = nuevos.length === 0 ? calculo.data?.lineas[i] : undefined;
-            if (!calculada || !todasValidas) return null;
-            const unidad = unidadCorta(l.producto.unidad_base);
+          totalCalculado={datos?.compra.total}
+          etiquetaPrecio="Precio de venta c/u"
+          debajo={(_, i) => {
+            const d = datos?.detalle[i];
+            if (!d) return null;
             return (
               <p className="mt-2 text-sm text-gray-600">
-                {formatearDinero(calculada.subtotal)} + IVA {formatearDinero(calculada.iva)} · entran{' '}
-                {formatearCantidad(calculada.cantidad_base)} {unidad} a {formatearCosto(calculada.costo_unitario_base)}
+                {formatearDinero(d.subtotal)} + IVA {formatearDinero(d.iva)} · entran {formatearCantidad(d.unidades)} a{' '}
+                {formatearCosto(d.costo_unidad)} c/u
               </p>
             );
           }}
         />
-      </Tarjeta>
-
-      <Tarjeta className="mb-4">
-        <h2 className="mb-1 font-semibold">Productos que aún no tienes</h2>
-        <p className="mb-3 text-sm text-gray-500">
-          Escribe el nombre: si ya lo tienes aparece para elegirlo; si no, se crea al registrar la compra y queda en
-          «Productos» marcado «por completar».
-        </p>
-        <EditorNuevos
-          productos={productos.data ?? []}
-          nuevos={nuevos}
-          setNuevos={setNuevos}
-          alElegirExistente={(j, producto, presentacion) => {
-            const n = nuevos[j];
-            if (!n) return;
-            setNuevos((ns) => ns.filter((_, i) => i !== j));
-            setLineas((ls) => [...ls, aLineaExistente(n, producto, presentacion)]);
-          }}
-          validados={nuevosValidados}
-          mostrarErrores={mostrarErrores}
-          lineaConError={lineaConError}
-          desfase={lineas.length}
-          etiquetaPrecio="Precio de venta c/u"
-        />
+        {nuevos > 0 && (
+          <p className="mt-3 text-sm text-gray-600">
+            {nuevos === 1 ? 'El producto nuevo se crea' : `Los ${nuevos} productos nuevos se crean`} al registrar y
+            {nuevos === 1 ? ' queda' : ' quedan'} en «Productos» marcado{nuevos === 1 ? '' : 's'} «por completar».
+          </p>
+        )}
       </Tarjeta>
 
       <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-gray-200 bg-gray-50 p-4">
-        {totales && (
+        {datos && (
           <dl className="grid grid-cols-2 gap-x-4 text-sm tabular-nums">
             <dt className="text-gray-600">Subtotal</dt>
-            <dd className="text-right">{formatearDinero(totales.subtotal)}</dd>
-            {Number(totales.descuento) > 0 && (
+            <dd className="text-right">{formatearDinero(datos.compra.subtotal)}</dd>
+            {Number(datos.compra.descuento) > 0 && (
               <>
                 <dt className="text-gray-600">Descuento</dt>
-                <dd className="text-right">−{formatearDinero(totales.descuento)}</dd>
+                <dd className="text-right">−{formatearDinero(datos.compra.descuento)}</dd>
               </>
             )}
             <dt className="text-gray-600">IVA</dt>
-            <dd className="text-right">{formatearDinero(totales.iva)}</dd>
+            <dd className="text-right">{formatearDinero(datos.compra.iva)}</dd>
             <dt className="font-semibold">Total</dt>
-            <dd className="text-right font-semibold">{formatearDinero(totales.total)}</dd>
+            <dd className="text-right font-semibold">{formatearDinero(datos.compra.total)}</dd>
           </dl>
         )}
-        {todoEnviable && <AvisoError error={errorCalculo} />}
+        {lineas && <AvisoError error={simulacion.error} />}
         {errorCabecera && <Aviso>{errorCabecera}</Aviso>}
         <AvisoError error={registrar.error} />
         <Boton onClick={confirmar} disabled={registrar.isPending}>

@@ -1,31 +1,53 @@
 import { useState } from 'react';
-import { Calculator, PackagePlus, ShoppingBag } from 'lucide-react';
+import { Calculator, ShoppingBag } from 'lucide-react';
 import { useProductos } from '@/modules/catalogo/api';
 import { useBorrador, useBorradorAjeno } from '@/shared/borrador';
 import { leerDecimal } from '@/shared/decimal';
-import { formatearCosto, formatearDinero } from '@/shared/formato';
+import { formatearCantidad, formatearCosto, formatearDinero, formatearPorcentaje } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
 import { formatearFecha, useSimularCompra, type Simulacion } from './api';
-import {
-  aLineaExistente,
-  EditorLineas,
-  EditorNuevos,
-  lineasParaEnviar,
-  validarNuevo,
-  type LineaEnPantalla,
-  type NuevoEnPantalla,
-} from './LineasCompra';
-import { BORRADOR_LINEAS_COMPRA, BORRADOR_NUEVOS_COMPRA } from './NuevaCompra';
-import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
+import { EditorCompra, OPCIONES_INICIALES, prepararItems, type ItemCompra, type OpcionesCompra } from './LineasCompra';
+import { BORRADOR_ITEMS_COMPRA, BORRADOR_OPCIONES_COMPRA } from './NuevaCompra';
+import { ResumenUtilidad, TotalCompra } from './UtilidadCompra';
+
+type Detalle = Simulacion['detalle'][number];
+
+/** La cuenta de una línea, completa: unidades × precio = venta, menos el costo. */
+function CuentaLinea({ detalle }: { detalle: Detalle }) {
+  if (detalle.venta_total === null || detalle.precio_unidad === null) {
+    return (
+      <p className="text-sm text-gray-600">
+        Entran {formatearCantidad(detalle.unidades)} a {formatearCosto(detalle.costo_unidad)} c/u · costo{' '}
+        {formatearDinero(detalle.costo_total)}.{' '}
+        {detalle.nuevo ? 'Escribe a cuánto venderías cada uno para ver lo que ganas.' : 'Sin precio de venta.'}
+      </p>
+    );
+  }
+  const ganancia = Number(detalle.venta_total) - Number(detalle.costo_total);
+  const bruto = Number(detalle.unidades) * Number(detalle.precio_unidad);
+  // Si el precio incluye IVA, a la bodega le queda la venta sin IVA.
+  const conIvaDentro = bruto - Number(detalle.venta_total) > 0.01;
+  return (
+    <p className={`text-sm ${ganancia < 0 ? 'font-medium text-red-700' : 'text-gray-700'}`}>
+      {formatearCantidad(detalle.unidades)} × {formatearCosto(detalle.precio_unidad)} ={' '}
+      <strong>venta {formatearDinero(detalle.venta_total)}</strong>
+      {conIvaDentro && ' sin IVA'} · costo {formatearDinero(detalle.costo_total)} ·{' '}
+      <strong>
+        {ganancia < 0 ? 'pierdes' : 'ganas'} {formatearDinero(Math.abs(ganancia).toFixed(2))}
+      </strong>
+      {Number(detalle.venta_total) > 0 && ` (${formatearPorcentaje((ganancia / Number(detalle.venta_total)).toFixed(4))})`}
+    </p>
+  );
+}
 
 /** Comparación con la última compra y precio para el margen pedido. */
-function Consejos({ detalle, margen, nuevo }: { detalle: Simulacion['detalle'][number]; margen: string; nuevo?: boolean }) {
+function Consejos({ detalle, margen }: { detalle: Detalle; margen: string }) {
   const diferencia = detalle.costo_anterior === null ? 0 : Number(detalle.costo_unidad) - Number(detalle.costo_anterior);
   return (
-    <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-600">
-      {nuevo ? (
+    <div className="mt-0.5 flex flex-col gap-0.5 text-sm text-gray-600">
+      {detalle.nuevo ? (
         <p>Cada unidad te costaría {formatearCosto(detalle.costo_unidad)}.</p>
       ) : detalle.costo_anterior === null ? (
         <p>Primera compra de este producto: no hay con qué comparar.</p>
@@ -42,9 +64,9 @@ function Consejos({ detalle, margen, nuevo }: { detalle: Simulacion['detalle'][n
       )}
       {detalle.precio_sugerido !== null && detalle.presentacion_venta && (
         <p>
-          Para ganar {margen} %: vende {nuevo ? 'cada unidad' : `«${detalle.presentacion_venta}»`} a{' '}
+          Para ganar {margen} %: vende {detalle.nuevo ? 'cada unidad' : `«${detalle.presentacion_venta}»`} a{' '}
           {formatearDinero(detalle.precio_sugerido)}
-          {nuevo
+          {detalle.nuevo
             ? '.'
             : detalle.precio_actual !== null
               ? ` (hoy ${formatearDinero(detalle.precio_actual)}).`
@@ -57,33 +79,23 @@ function Consejos({ detalle, margen, nuevo }: { detalle: Simulacion['detalle'][n
 
 /**
  * «¿Cuánto gano?» (D-065): armar una compra para ver su costo y su utilidad
- * antes de decidir. No registra nada; si conviene, pasa a «Nueva compra», con
- * los productos que aún no existen, que se crean al registrarla (D-066, D-067).
+ * antes de decidir. No registra nada; si conviene, pasa a «Nueva compra», donde
+ * los productos que aún no existen se crean al registrar (D-066 a D-068).
  */
 export function CuantoGano() {
   const productos = useProductos();
   const ajeno = useBorradorAjeno();
-  const [lineas, setLineas, borrarLineas] = useBorrador<LineaEnPantalla[]>('simular:lineas', []);
-  const [nuevos, setNuevos, borrarNuevos] = useBorrador<NuevoEnPantalla[]>('simular:nuevos', []);
+  const [items, setItems, borrarItems] = useBorrador<ItemCompra[]>('simular:items', []);
+  const [opciones, setOpciones, borrarOpciones] = useBorrador<OpcionesCompra>('simular:opciones', OPCIONES_INICIALES);
   const [margen, setMargen] = useBorrador('simular:margen', '20');
   const [mostrarErrores, setMostrarErrores] = useState(false);
 
-  const existentes = lineasParaEnviar(lineas);
-  const nuevosValidados = nuevos.map(validarNuevo);
-  const existentesOk = lineas.length === 0 || existentes.todasValidas;
-  const nuevosOk = nuevosValidados.every((v) => v.linea !== null);
-  const hayAlgo = lineas.length + nuevos.length > 0;
-  const paraEnviar =
-    hayAlgo && existentesOk && nuevosOk
-      ? [...(existentes.paraEnviar ?? []), ...nuevosValidados.map((v) => v.linea as object)]
-      : null;
-
+  const { validados, lineas } = prepararItems(items, opciones);
   const margenLeido = leerDecimal(margen, { decimales: 2 });
   const margenValido = margenLeido.ok && Number(margenLeido.valor) < 90;
-  const simulacion = useSimularCompra(paraEnviar, margenValido ? String(Number(margenLeido.valor) / 100) : null);
-  const datos = paraEnviar ? simulacion.data : undefined;
+  const simulacion = useSimularCompra(lineas, margenValido ? String(Number(margenLeido.valor) / 100) : null);
+  const datos = lineas ? simulacion.data : undefined;
 
-  // La base cuenta las líneas desde 1: primero las existentes y luego las nuevas.
   const lineaConError =
     simulacion.error instanceof ErrorDeNegocio
       ? Number((simulacion.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
@@ -91,24 +103,23 @@ export function CuantoGano() {
 
   const pasarACompra = () => {
     setMostrarErrores(true);
-    if (!paraEnviar) return;
-    const pendientes =
-      (ajeno.leer<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA) ?? []).length +
-      (ajeno.leer<NuevoEnPantalla[]>(BORRADOR_NUEVOS_COMPRA) ?? []).length;
+    if (!lineas) return;
+    const pendientes = (ajeno.leer<ItemCompra[]>(BORRADOR_ITEMS_COMPRA) ?? []).length;
     if (
       pendientes > 0 &&
       !window.confirm('Ya tienes una compra a medio escribir en «Nueva compra». ¿Reemplazar sus productos por estos?')
     ) {
       return;
     }
-    ajeno.escribir(BORRADOR_LINEAS_COMPRA, lineas);
-    ajeno.escribir(BORRADOR_NUEVOS_COMPRA, nuevos);
-    borrarLineas();
-    borrarNuevos();
+    ajeno.escribir(BORRADOR_ITEMS_COMPRA, items);
+    ajeno.escribir(BORRADOR_OPCIONES_COMPRA, opciones);
+    borrarItems();
+    borrarOpciones();
     navegar({ nombre: 'compra-nueva' });
   };
 
   if (productos.isPending) return <Cargando />;
+  const nuevos = items.filter((it) => !it.productoId).length;
 
   return (
     <>
@@ -134,75 +145,35 @@ export function CuantoGano() {
       </Tarjeta>
 
       <Tarjeta className="mb-4">
-        <h2 className="mb-2 flex items-center gap-2 font-semibold">
+        <h2 className="mb-3 flex items-center gap-2 font-semibold">
           <Calculator className="size-5 text-emerald-700" aria-hidden />
-          Productos que ya tienes
+          Productos
         </h2>
-        <EditorLineas
+        <EditorCompra
           productos={productos.data ?? []}
-          lineas={lineas}
-          setLineas={setLineas}
-          validadas={existentes.validadas}
+          items={items}
+          setItems={setItems}
+          opciones={opciones}
+          setOpciones={setOpciones}
+          validados={validados}
           mostrarErrores={mostrarErrores}
           lineaConError={lineaConError}
-          debajo={(_, i) => {
-            const linea = datos?.lineas[i];
-            const detalle = datos?.detalle[i];
-            if (!linea || !detalle) return null;
-            return (
-              <div className="mt-2">
-                <LineaUtilidad linea={linea} />
-                <Consejos detalle={detalle} margen={margen} />
-              </div>
-            );
-          }}
-        />
-      </Tarjeta>
-
-      <Tarjeta className="mb-4">
-        <h2 className="mb-1 flex items-center gap-2 font-semibold">
-          <PackagePlus className="size-5 text-emerald-700" aria-hidden />
-          Productos que aún no tienes
-        </h2>
-        <p className="mb-3 text-sm text-gray-500">
-          Escribe el nombre: si ya lo tienes aparece para elegirlo; si no, queda como nuevo y se crea cuando registres
-          la compra. Pon cuántas unidades trae el bulto, cuánto cuesta el bulto sin IVA y, si ya lo sabes, a cuánto
-          venderías cada unidad.
-        </p>
-        <EditorNuevos
-          productos={productos.data ?? []}
-          nuevos={nuevos}
-          setNuevos={setNuevos}
-          alElegirExistente={(j, producto, presentacion) => {
-            const n = nuevos[j];
-            if (!n) return;
-            setNuevos((ns) => ns.filter((_, i) => i !== j));
-            setLineas((ls) => [...ls, aLineaExistente(n, producto, presentacion)]);
-          }}
-          validados={nuevosValidados}
-          mostrarErrores={mostrarErrores}
-          lineaConError={lineaConError}
-          desfase={lineas.length}
+          totalCalculado={datos?.compra.total}
           etiquetaPrecio="Venderías c/u a"
-          debajo={(_, j) => {
-            const linea = datos?.lineas[lineas.length + j];
-            const detalle = datos?.detalle[lineas.length + j];
-            if (!linea || !detalle) return null;
+          debajo={(_, i) => {
+            const d = datos?.detalle[i];
+            if (!d) return null;
             return (
               <div className="mt-2">
-                {linea.utilidad === null ? (
-                  <p className="text-sm text-gray-600">Escribe a cuánto lo venderías para ver lo que ganas.</p>
-                ) : (
-                  <LineaUtilidad linea={linea} />
-                )}
-                <Consejos detalle={detalle} margen={margen} nuevo />
+                <CuentaLinea detalle={d} />
+                <Consejos detalle={d} margen={margen} />
               </div>
             );
           }}
         />
       </Tarjeta>
 
-      {paraEnviar && <AvisoError error={simulacion.error} />}
+      {lineas && <AvisoError error={simulacion.error} />}
       {datos && (
         <>
           <TotalCompra compra={datos.compra} />
@@ -210,9 +181,9 @@ export function CuantoGano() {
         </>
       )}
 
-      {hayAlgo && (
+      {items.length > 0 && (
         <div className="flex flex-col gap-2">
-          {nuevos.length > 0 && (
+          {nuevos > 0 && (
             <p className="text-sm text-gray-600">
               Al registrar la compra, los productos nuevos se crean solos y quedan en «Productos» marcados «por
               completar» para que les pongas código, categoría y foto.
@@ -225,8 +196,7 @@ export function CuantoGano() {
             <Boton
               variante="secundario"
               onClick={() => {
-                borrarLineas();
-                borrarNuevos();
+                borrarItems();
                 setMostrarErrores(false);
               }}
             >

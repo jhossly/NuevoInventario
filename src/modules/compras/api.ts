@@ -212,7 +212,8 @@ export function useRegistrarCompra() {
   return useMutation({
     mutationFn: (d: DatosCompra) =>
       llamar(
-        d.lineas.some((l) => 'nuevo' in l) ? 'registrar_compra_con_nuevos' : 'registrar_compra',
+        // Entiende presentacion_id, producto_id con bultos y productos nuevos (D-068).
+        d.lineas.every((l) => 'presentacion_id' in l) ? 'registrar_compra' : 'registrar_compra_con_nuevos',
         {
           p_proveedor_id: d.proveedorId,
           p_con_respaldo: d.conRespaldo,
@@ -355,6 +356,13 @@ const esquemaSimulacion = esquemaUtilidad.omit({ compra: true }).extend({
   detalle: z.array(
     z.object({
       orden: z.number(),
+      nuevo: z.boolean(),
+      unidades: decimal,
+      subtotal: decimal,
+      iva: decimal,
+      costo_total: decimal,
+      venta_total: decimal.nullable(),
+      precio_unidad: decimal.nullable(),
       costo_unidad: decimal,
       costo_anterior: decimal.nullable(),
       fecha_anterior: z.string().nullable(),
