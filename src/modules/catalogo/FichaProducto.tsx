@@ -4,10 +4,10 @@ import { useContexto } from '@/modules/sesion/sesion';
 import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
-import { AvisoError, Boton, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
 import { FormPresentacion } from './FormPresentacion';
 import { FormProducto } from './FormProducto';
-import { unidadCorta, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useEliminarPresentacion, useEliminarProducto, useProducto, type Producto } from './api';
+import { faltantesDe, useMarcarRevisado, unidadCorta, bajoStock, textoIva, presentacionesOrdenadas, stockDe, useEliminarPresentacion, useEliminarProducto, useProducto, type Producto } from './api';
 
 export function FichaProducto({ id }: { id: string }) {
   const producto = useProducto(id);
@@ -36,6 +36,7 @@ function Ficha({ producto }: { producto: Producto }) {
   return (
     <>
       <Encabezado titulo={producto.nombre} volver={enlace({ nombre: 'productos' })} />
+      {esDueno && producto.por_completar && <PorCompletar producto={producto} />}
 
       {!producto.controla_stock ? (
         <Tarjeta className="mb-4">
@@ -223,5 +224,27 @@ function Presentaciones({ producto, editable }: { producto: Producto; editable: 
         )}
       </ul>
     </Tarjeta>
+  );
+}
+
+/** Producto creado desde una compra (D-067): qué le falta y «Ya está completo». */
+function PorCompletar({ producto }: { producto: Producto }) {
+  const marcar = useMarcarRevisado();
+  const faltan = faltantesDe(producto);
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <Aviso tipo="info">
+        Este producto se creó desde una compra.{' '}
+        {faltan.length > 0
+          ? `Le falta: ${faltan.join(', ')}. Complétalo abajo y luego márcalo como completo.`
+          : 'Ya tiene lo básico: revísalo y márcalo como completo.'}
+      </Aviso>
+      <div>
+        <Boton variante="secundario" onClick={() => marcar.mutate(producto.id)} disabled={marcar.isPending}>
+          {marcar.isPending ? 'Guardando…' : 'Ya está completo'}
+        </Boton>
+      </div>
+      <AvisoError error={marcar.error} />
+    </div>
   );
 }

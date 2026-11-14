@@ -8,8 +8,16 @@ import { nuevaClave } from '@/shared/uuid';
 import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { FormProveedor } from './Proveedores';
-import { useCalculoCompra, useProveedores, useRegistrarCompra } from './api';
-import { EditorLineas, lineasParaEnviar, type LineaEnPantalla } from './LineasCompra';
+import { useCalculoCompra, useProveedores, useRegistrarCompra, useSimularCompra } from './api';
+import {
+  aLineaExistente,
+  EditorLineas,
+  EditorNuevos,
+  lineasParaEnviar,
+  validarNuevo,
+  type LineaEnPantalla,
+  type NuevoEnPantalla,
+} from './LineasCompra';
 
 function hoy(): string {
   // Fecha local del dispositivo (el Dueño está en Ecuador); la base valida de
@@ -20,6 +28,8 @@ function hoy(): string {
 
 /** Nombre del borrador de líneas: «¿Cuánto gano?» lo llena al pasar a compra. */
 export const BORRADOR_LINEAS_COMPRA = 'compra:lineas';
+/** Productos que aún no existen: se crean al registrar (D-067). */
+export const BORRADOR_NUEVOS_COMPRA = 'compra:nuevos';
 
 export function NuevaCompra() {
   const productos = useProductos();
@@ -33,21 +43,31 @@ export function NuevaCompra() {
   const [numero, setNumero, borrar3] = useBorrador('compra:numero', '');
   const [fecha, setFecha, borrar4] = useBorrador('compra:fecha', hoy);
   const [lineas, setLineas, borrar5] = useBorrador<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA, []);
+  const [nuevos, setNuevos, borrar7] = useBorrador<NuevoEnPantalla[]>(BORRADOR_NUEVOS_COMPRA, []);
   const [nuevoProveedor, setNuevoProveedor] = useState(false);
   const [mostrarErrores, setMostrarErrores] = useState(false);
   const [errorCabecera, setErrorCabecera] = useState<string | null>(null);
   // Una clave por compra: un reintento tras un corte de red no la duplica.
   const [clave, , borrar6] = useBorrador('compra:clave', nuevaClave);
-  const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6].forEach((b) => b());
+  const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6, borrar7].forEach((b) => b());
 
   const { validadas, todasValidas, paraEnviar } = lineasParaEnviar(lineas);
-  const calculo = useCalculoCompra(paraEnviar);
+  const nuevosValidados = nuevos.map(validarNuevo);
+  const hayAlgo = lineas.length + nuevos.length > 0;
+  const todoEnviable =
+    hayAlgo && (lineas.length === 0 || todasValidas) && nuevosValidados.every((v) => v.linea !== null)
+      ? [...(paraEnviar ?? []), ...nuevosValidados.map((v) => v.linea as object)]
+      : null;
+  const calculo = useCalculoCompra(nuevos.length === 0 ? paraEnviar : null);
+  // Con productos nuevos los totales salen de la simulación, que los entiende.
+  const simulacion = useSimularCompra(nuevos.length > 0 ? todoEnviable : null, '0.2');
+  const totales = nuevos.length > 0 ? (todoEnviable ? simulacion.data?.compra : undefined) : todasValidas ? calculo.data : undefined;
+  const errorCalculo = nuevos.length > 0 ? simulacion.error : calculo.error;
 
-  // La base indica en qué línea está el problema (detalle.linea, desde 1).
-  const lineaConError =
-    calculo.error instanceof ErrorDeNegocio
-      ? Number((calculo.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
-      : -1;
+  // La base indica en qué línea está el problema (detalle.linea, desde 1),
+  // contando primero los productos que ya existen y luego los nuevos.
+  const conLinea = [registrar.error, errorCalculo].find((e) => e instanceof ErrorDeNegocio) as ErrorDeNegocio | undefined;
+  const lineaConError = conLinea ? Number((conLinea.detalle as { linea?: number } | null)?.linea ?? 0) - 1 : -1;
 
   const confirmar = () => {
     setMostrarErrores(true);
@@ -56,8 +76,8 @@ export function NuevaCompra() {
       setErrorCabecera('Con respaldo: elige el proveedor y escribe el número de la factura.');
       return;
     }
-    if (!paraEnviar) {
-      setErrorCabecera(lineas.length === 0 ? 'Agrega al menos un producto.' : 'Revisa las líneas marcadas.');
+    if (!todoEnviable) {
+      setErrorCabecera(hayAlgo ? 'Revisa las líneas marcadas.' : 'Agrega al menos un producto.');
       return;
     }
     unaVez((terminar) => registrar.mutate(
@@ -66,7 +86,7 @@ export function NuevaCompra() {
         conRespaldo,
         numeroDocumento: numero.trim() || null,
         fecha: fecha || null,
-        lineas: paraEnviar,
+        lineas: todoEnviable,
         clave,
       },
       {
@@ -149,7 +169,7 @@ export function NuevaCompra() {
           mostrarErrores={mostrarErrores}
           lineaConError={lineaConError}
           debajo={(l, i) => {
-            const calculada = calculo.data?.lineas[i];
+            const calculada = nuevos.length === 0 ? calculo.data?.lineas[i] : undefined;
             if (!calculada || !todasValidas) return null;
             const unidad = unidadCorta(l.producto.unidad_base);
             return (
@@ -162,24 +182,48 @@ export function NuevaCompra() {
         />
       </Tarjeta>
 
+      <Tarjeta className="mb-4">
+        <h2 className="mb-1 font-semibold">Productos que aún no tienes</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          Escribe el nombre: si ya lo tienes aparece para elegirlo; si no, se crea al registrar la compra y queda en
+          «Productos» marcado «por completar».
+        </p>
+        <EditorNuevos
+          productos={productos.data ?? []}
+          nuevos={nuevos}
+          setNuevos={setNuevos}
+          alElegirExistente={(j, producto, presentacion) => {
+            const n = nuevos[j];
+            if (!n) return;
+            setNuevos((ns) => ns.filter((_, i) => i !== j));
+            setLineas((ls) => [...ls, aLineaExistente(n, producto, presentacion)]);
+          }}
+          validados={nuevosValidados}
+          mostrarErrores={mostrarErrores}
+          lineaConError={lineaConError}
+          desfase={lineas.length}
+          etiquetaPrecio="Precio de venta c/u"
+        />
+      </Tarjeta>
+
       <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-gray-200 bg-gray-50 p-4">
-        {calculo.data && todasValidas && (
+        {totales && (
           <dl className="grid grid-cols-2 gap-x-4 text-sm tabular-nums">
             <dt className="text-gray-600">Subtotal</dt>
-            <dd className="text-right">{formatearDinero(calculo.data.subtotal)}</dd>
-            {Number(calculo.data.descuento) > 0 && (
+            <dd className="text-right">{formatearDinero(totales.subtotal)}</dd>
+            {Number(totales.descuento) > 0 && (
               <>
                 <dt className="text-gray-600">Descuento</dt>
-                <dd className="text-right">−{formatearDinero(calculo.data.descuento)}</dd>
+                <dd className="text-right">−{formatearDinero(totales.descuento)}</dd>
               </>
             )}
             <dt className="text-gray-600">IVA</dt>
-            <dd className="text-right">{formatearDinero(calculo.data.iva)}</dd>
+            <dd className="text-right">{formatearDinero(totales.iva)}</dd>
             <dt className="font-semibold">Total</dt>
-            <dd className="text-right font-semibold">{formatearDinero(calculo.data.total)}</dd>
+            <dd className="text-right font-semibold">{formatearDinero(totales.total)}</dd>
           </dl>
         )}
-        {todasValidas && <AvisoError error={calculo.error} />}
+        {todoEnviable && <AvisoError error={errorCalculo} />}
         {errorCabecera && <Aviso>{errorCabecera}</Aviso>}
         <AvisoError error={registrar.error} />
         <Boton onClick={confirmar} disabled={registrar.isPending}>

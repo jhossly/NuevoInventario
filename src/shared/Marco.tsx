@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { cerrarSesion, type Contexto } from '@/modules/sesion/sesion';
+import { porCompletar, useProductos } from '@/modules/catalogo/api';
 import { borrarBorradoresDe } from '@/shared/borrador';
 import { enlace, type Ruta } from '@/shared/ruta';
 import type { Icono } from '@/shared/ui';
@@ -104,7 +105,29 @@ function Identidad({ contexto }: { contexto: Contexto }) {
   );
 }
 
-function Lista({ esDueno, ruta, alElegir }: { esDueno: boolean; ruta: Ruta; alElegir?: () => void }) {
+type Avisos = Partial<Record<Ruta['nombre'], number>>;
+
+/** Número pequeño junto a una sección que tiene algo pendiente. */
+function Contador({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span className="ml-auto rounded-full bg-amber-500 px-1.5 text-xs font-semibold leading-5 text-white" aria-label={`${n} pendientes`}>
+      {n}
+    </span>
+  );
+}
+
+function Lista({
+  esDueno,
+  ruta,
+  avisos,
+  alElegir,
+}: {
+  esDueno: boolean;
+  ruta: Ruta;
+  avisos: Avisos;
+  alElegir?: () => void;
+}) {
   return (
     <>
       {GRUPOS.map((grupo) => {
@@ -123,6 +146,7 @@ function Lista({ esDueno, ruta, alElegir }: { esDueno: boolean; ruta: Ruta; alEl
               >
                 <s.icono className="size-5 shrink-0" aria-hidden />
                 {s.titulo}
+                <Contador n={avisos[s.ruta.nombre] ?? 0} />
               </a>
             ))}
           </div>
@@ -176,6 +200,9 @@ export function Marco({
 }) {
   const esDueno = contexto.rol === 'DUENO';
   const [abierto, setAbierto] = useState(false);
+  // Productos creados desde compras que faltan completar (D-067).
+  const productos = useProductos();
+  const avisos: Avisos = { productos: esDueno ? porCompletar(productos.data).length : 0 };
 
   useEffect(() => {
     setAbierto(false);
@@ -188,7 +215,7 @@ export function Marco({
           <Identidad contexto={contexto} />
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto" aria-label="Menú principal">
-          <Lista esDueno={esDueno} ruta={ruta} />
+          <Lista esDueno={esDueno} ruta={ruta} avisos={avisos} />
         </nav>
         <Salir correo={correo} contexto={contexto} />
       </aside>
@@ -211,8 +238,11 @@ export function Marco({
               key={nombre}
               href={enlace(s.ruta)}
               aria-current={s.incluye.includes(ruta.nombre) ? 'page' : undefined}
-              className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-gray-600 aria-[current=page]:font-semibold aria-[current=page]:text-emerald-800"
+              className="relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-gray-600 aria-[current=page]:font-semibold aria-[current=page]:text-emerald-800"
             >
+              {(avisos[s.ruta.nombre] ?? 0) > 0 && (
+                <span className="absolute right-3 top-1.5 size-2.5 rounded-full bg-amber-500" aria-label="Tiene pendientes" />
+              )}
               <s.icono className="size-6" aria-hidden />
               {s.titulo}
             </a>
@@ -249,7 +279,7 @@ export function Marco({
               </button>
             </div>
             <nav className="min-h-0 flex-1 overflow-y-auto" aria-label="Menú completo">
-              <Lista esDueno={esDueno} ruta={ruta} alElegir={() => setAbierto(false)} />
+              <Lista esDueno={esDueno} ruta={ruta} avisos={avisos} alElegir={() => setAbierto(false)} />
             </nav>
             <Salir correo={correo} contexto={contexto} />
           </div>

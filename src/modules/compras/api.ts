@@ -201,7 +201,8 @@ export interface DatosCompra {
   conRespaldo: boolean;
   numeroDocumento: string | null;
   fecha: string | null;
-  lineas: LineaCompra[];
+  /** LineaCompra, o {nuevo} para un producto que se crea al registrar (D-067). */
+  lineas: object[];
   /** Se conserva entre reintentos para que no se duplique la compra. */
   clave: string;
 }
@@ -211,7 +212,7 @@ export function useRegistrarCompra() {
   return useMutation({
     mutationFn: (d: DatosCompra) =>
       llamar(
-        'registrar_compra',
+        d.lineas.some((l) => 'nuevo' in l) ? 'registrar_compra_con_nuevos' : 'registrar_compra',
         {
           p_proveedor_id: d.proveedorId,
           p_con_respaldo: d.conRespaldo,
@@ -220,7 +221,7 @@ export function useRegistrarCompra() {
           p_lineas: d.lineas,
           p_clave_idempotencia: d.clave,
         },
-        z.object({ compra_id: uuid, repetido: z.boolean(), total: decimal }),
+        z.object({ compra_id: uuid, repetido: z.boolean(), total: decimal, creados: z.number().optional() }),
       ),
     onSuccess: invalidar,
   });

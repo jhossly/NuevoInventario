@@ -4,10 +4,11 @@ import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { ClipboardCheck, Plus } from 'lucide-react';
-import { AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { FotoProducto } from './FotoProducto';
 import {
   bajoStock,
+  porCompletar,
   presentacionBase,
   stockDe,
   unidadCorta,
@@ -31,6 +32,7 @@ export function ListaProductos() {
 
   const [busqueda, setBusqueda] = useState('');
   const [soloBajos, setSoloBajos] = useState(false);
+  const [soloPorCompletar, setSoloPorCompletar] = useState(false);
   const [verInactivos, setVerInactivos] = useState(false);
   const [categoria, setCategoria] = useState('');
   const [proveedor, setProveedor] = useState('');
@@ -47,6 +49,7 @@ export function ListaProductos() {
       (p) =>
         (verInactivos || p.activo) &&
         (!soloBajos || bajoStock(p)) &&
+        (!soloPorCompletar || (p.activo && p.por_completar)) &&
         (categoria === '' || (categoria === 'ninguna' ? p.categoria_id === null : p.categoria_id === categoria)) &&
         (!delProveedor || delProveedor.has(p.id)) &&
         (texto === '' ||
@@ -54,9 +57,10 @@ export function ListaProductos() {
           [p.codigo_principal, p.codigo_auxiliar].some((c) => c !== null && normalizar(c) === texto) ||
           p.presentaciones.some((r) => r.codigo_barras === busqueda.trim())),
     );
-  }, [productos.data, proveedores.data, busqueda, soloBajos, verInactivos, categoria, proveedor]);
+  }, [productos.data, proveedores.data, busqueda, soloBajos, soloPorCompletar, verInactivos, categoria, proveedor]);
 
   const cuantosBajos = (productos.data ?? []).filter(bajoStock).length;
+  const cuantosPorCompletar = esDueno ? porCompletar(productos.data).length : 0;
 
   return (
     <>
@@ -80,6 +84,20 @@ export function ListaProductos() {
         <p className="mb-3 text-sm text-gray-600">
           Inventario valorizado: <strong className="text-gray-900">{formatearCosto(valorizado.data.valor_total)}</strong>
         </p>
+      )}
+
+      {cuantosPorCompletar > 0 && !soloPorCompletar && (
+        <div className="mb-3">
+          <Aviso tipo="info">
+            {cuantosPorCompletar === 1
+              ? 'Hay 1 producto creado desde una compra que necesita completarse'
+              : `Hay ${cuantosPorCompletar} productos creados desde compras que necesitan completarse`}{' '}
+            (precio, código, categoría o foto).{' '}
+            <button type="button" className="font-semibold underline" onClick={() => setSoloPorCompletar(true)}>
+              Verlos
+            </button>
+          </Aviso>
+        </div>
       )}
 
       <div className="mb-4 flex flex-col gap-2">
@@ -115,6 +133,13 @@ export function ListaProductos() {
             checked={soloBajos}
             onChange={(e) => setSoloBajos(e.target.checked)}
           />
+          {cuantosPorCompletar > 0 && (
+            <Casilla
+              etiqueta={`Solo por completar (${cuantosPorCompletar})`}
+              checked={soloPorCompletar}
+              onChange={(e) => setSoloPorCompletar(e.target.checked)}
+            />
+          )}
           {esDueno && (
             <Casilla etiqueta="Ver inactivos" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} />
           )}
@@ -151,7 +176,14 @@ export function ListaProductos() {
               >
                 <FotoProducto imagen={p.imagen} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.nombre}</p>
+                  <p className="truncate font-medium">
+                    {p.nombre}
+                    {esDueno && p.por_completar && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        Por completar
+                      </span>
+                    )}
+                  </p>
                   <p className="truncate text-sm text-gray-500">
                     {[p.categorias?.nombre, base?.precio_venta ? formatearDinero(base.precio_venta) : 'Sin precio']
                       .filter(Boolean)

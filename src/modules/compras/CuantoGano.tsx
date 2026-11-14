@@ -6,52 +6,19 @@ import { leerDecimal } from '@/shared/decimal';
 import { formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { ErrorDeNegocio } from '@/shared/rpc';
-import { nuevaClave } from '@/shared/uuid';
-import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Campo, Cargando, Encabezado, Tarjeta } from '@/shared/ui';
 import { formatearFecha, useSimularCompra, type Simulacion } from './api';
-import { EditorLineas, lineasParaEnviar, type LineaEnPantalla } from './LineasCompra';
-import { BORRADOR_LINEAS_COMPRA } from './NuevaCompra';
+import {
+  aLineaExistente,
+  EditorLineas,
+  EditorNuevos,
+  lineasParaEnviar,
+  validarNuevo,
+  type LineaEnPantalla,
+  type NuevoEnPantalla,
+} from './LineasCompra';
+import { BORRADOR_LINEAS_COMPRA, BORRADOR_NUEVOS_COMPRA } from './NuevaCompra';
 import { LineaUtilidad, ResumenUtilidad, TotalCompra } from './UtilidadCompra';
-
-/** Un producto que todavía no está en el catálogo (D-066). */
-interface NuevoEnPantalla {
-  local: string;
-  nombre: string;
-  /** Unidades que trae cada bulto. */
-  factor: string;
-  cantidad: string;
-  costo: string;
-  tarifa: string;
-  /** Precio por unidad al que se piensa vender; puede quedar vacío. */
-  precio: string;
-}
-
-type ErroresNuevo = Partial<Record<'nombre' | 'factor' | 'cantidad' | 'costo' | 'precio', string>>;
-
-function validarNuevo(n: NuevoEnPantalla): { errores: ErroresNuevo; linea: object | null } {
-  const errores: ErroresNuevo = {};
-  const factor = leerDecimal(n.factor, { decimales: 3, permitirCero: false });
-  const cantidad = leerDecimal(n.cantidad, { decimales: 3, permitirCero: false });
-  const costo = leerDecimal(n.costo, { decimales: 6 });
-  const precio = n.precio.trim() === '' ? ({ ok: true, valor: '' } as const) : leerDecimal(n.precio, { decimales: 4 });
-  if (n.nombre.trim() === '') errores.nombre = 'Escribe el nombre';
-  if (!factor.ok) errores.factor = factor.mensaje;
-  if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
-  if (!costo.ok) errores.costo = costo.mensaje;
-  if (!precio.ok) errores.precio = precio.mensaje;
-  if (Object.keys(errores).length > 0 || !factor.ok || !cantidad.ok || !costo.ok || !precio.ok) {
-    return { errores, linea: null };
-  }
-  return {
-    errores,
-    linea: {
-      nuevo: { nombre: n.nombre.trim(), factor: factor.valor, precio_venta: precio.valor },
-      cantidad: cantidad.valor,
-      costo_unitario: costo.valor,
-      tarifa_iva: n.tarifa,
-    },
-  };
-}
 
 /** Comparación con la última compra y precio para el margen pedido. */
 function Consejos({ detalle, margen, nuevo }: { detalle: Simulacion['detalle'][number]; margen: string; nuevo?: boolean }) {
@@ -90,8 +57,8 @@ function Consejos({ detalle, margen, nuevo }: { detalle: Simulacion['detalle'][n
 
 /**
  * «¿Cuánto gano?» (D-065): armar una compra para ver su costo y su utilidad
- * antes de decidir. No registra nada; si conviene, pasa a «Nueva compra». Los
- * productos que aún no existen se describen a mano (D-066).
+ * antes de decidir. No registra nada; si conviene, pasa a «Nueva compra», con
+ * los productos que aún no existen, que se crean al registrarla (D-066, D-067).
  */
 export function CuantoGano() {
   const productos = useProductos();
@@ -122,21 +89,22 @@ export function CuantoGano() {
       ? Number((simulacion.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
       : -1;
 
-  const cambiarNuevo = (indice: number, cambios: Partial<NuevoEnPantalla>) =>
-    setNuevos((ns) => ns.map((n, i) => (i === indice ? { ...n, ...cambios } : n)));
-
   const pasarACompra = () => {
     setMostrarErrores(true);
-    if (!existentes.paraEnviar || nuevos.length > 0) return;
-    const pendientes = ajeno.leer<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA) ?? [];
+    if (!paraEnviar) return;
+    const pendientes =
+      (ajeno.leer<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA) ?? []).length +
+      (ajeno.leer<NuevoEnPantalla[]>(BORRADOR_NUEVOS_COMPRA) ?? []).length;
     if (
-      pendientes.length > 0 &&
+      pendientes > 0 &&
       !window.confirm('Ya tienes una compra a medio escribir en «Nueva compra». ¿Reemplazar sus productos por estos?')
     ) {
       return;
     }
     ajeno.escribir(BORRADOR_LINEAS_COMPRA, lineas);
+    ajeno.escribir(BORRADOR_NUEVOS_COMPRA, nuevos);
     borrarLineas();
+    borrarNuevos();
     navegar({ nombre: 'compra-nueva' });
   };
 
@@ -197,108 +165,41 @@ export function CuantoGano() {
           Productos que aún no tienes
         </h2>
         <p className="mb-3 text-sm text-gray-500">
-          Para probar algo nuevo sin crearlo: escribe cuántas unidades trae el bulto, cuánto cuesta el bulto sin IVA y,
-          si ya lo sabes, a cuánto venderías cada unidad.
+          Escribe el nombre: si ya lo tienes aparece para elegirlo; si no, queda como nuevo y se crea cuando registres
+          la compra. Pon cuántas unidades trae el bulto, cuánto cuesta el bulto sin IVA y, si ya lo sabes, a cuánto
+          venderías cada unidad.
         </p>
-        <ol className="flex flex-col gap-3">
-          {nuevos.map((n, j) => {
-            const errores = mostrarErrores ? (nuevosValidados[j]?.errores ?? {}) : {};
-            const k = lineas.length + j;
-            const linea = datos?.lineas[k];
-            const detalle = datos?.detalle[k];
+        <EditorNuevos
+          productos={productos.data ?? []}
+          nuevos={nuevos}
+          setNuevos={setNuevos}
+          alElegirExistente={(j, producto, presentacion) => {
+            const n = nuevos[j];
+            if (!n) return;
+            setNuevos((ns) => ns.filter((_, i) => i !== j));
+            setLineas((ls) => [...ls, aLineaExistente(n, producto, presentacion)]);
+          }}
+          validados={nuevosValidados}
+          mostrarErrores={mostrarErrores}
+          lineaConError={lineaConError}
+          desfase={lineas.length}
+          etiquetaPrecio="Venderías c/u a"
+          debajo={(_, j) => {
+            const linea = datos?.lineas[lineas.length + j];
+            const detalle = datos?.detalle[lineas.length + j];
+            if (!linea || !detalle) return null;
             return (
-              <li
-                key={n.local}
-                className={`rounded-lg border p-3 ${lineaConError === k ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
-              >
-                <div className="mb-2 flex items-end gap-2">
-                  <div className="flex-1">
-                    <Campo
-                      etiqueta="Nombre"
-                      placeholder="Ej.: Galletas de coco"
-                      value={n.nombre}
-                      onChange={(e) => cambiarNuevo(j, { nombre: e.target.value })}
-                      error={errores.nombre}
-                    />
-                  </div>
-                  <Boton
-                    variante="secundario"
-                    aria-label={`Quitar ${n.nombre || 'producto nuevo'}`}
-                    onClick={() => setNuevos((ns) => ns.filter((_, i) => i !== j))}
-                  >
-                    ✕
-                  </Boton>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  <Campo
-                    etiqueta="Unidades por bulto"
-                    inputMode="decimal"
-                    value={n.factor}
-                    onChange={(e) => cambiarNuevo(j, { factor: e.target.value })}
-                    error={errores.factor}
-                  />
-                  <Campo
-                    etiqueta="Bultos"
-                    inputMode="decimal"
-                    value={n.cantidad}
-                    onChange={(e) => cambiarNuevo(j, { cantidad: e.target.value })}
-                    error={errores.cantidad}
-                  />
-                  <Campo
-                    etiqueta="Costo del bulto"
-                    inputMode="decimal"
-                    value={n.costo}
-                    onChange={(e) => cambiarNuevo(j, { costo: e.target.value })}
-                    error={errores.costo}
-                  />
-                  <Selector
-                    etiqueta="IVA de la compra"
-                    value={n.tarifa}
-                    onChange={(e) => cambiarNuevo(j, { tarifa: e.target.value })}
-                  >
-                    {['0', '5', '15'].map((t) => (
-                      <option key={t} value={t}>
-                        {t} %
-                      </option>
-                    ))}
-                  </Selector>
-                  <Campo
-                    etiqueta="Venderías c/u a"
-                    inputMode="decimal"
-                    placeholder="Opcional"
-                    value={n.precio}
-                    onChange={(e) => cambiarNuevo(j, { precio: e.target.value })}
-                    error={errores.precio}
-                  />
-                </div>
-                {linea && detalle && (
-                  <div className="mt-2">
-                    {linea.utilidad === null ? (
-                      <p className="text-sm text-gray-600">Escribe a cuánto lo venderías para ver lo que ganas.</p>
-                    ) : (
-                      <LineaUtilidad linea={linea} />
-                    )}
-                    <Consejos detalle={detalle} margen={margen} nuevo />
-                  </div>
+              <div className="mt-2">
+                {linea.utilidad === null ? (
+                  <p className="text-sm text-gray-600">Escribe a cuánto lo venderías para ver lo que ganas.</p>
+                ) : (
+                  <LineaUtilidad linea={linea} />
                 )}
-              </li>
+                <Consejos detalle={detalle} margen={margen} nuevo />
+              </div>
             );
-          })}
-        </ol>
-        <div className="mt-3">
-          <Boton
-            variante="secundario"
-            icono={PackagePlus}
-            onClick={() =>
-              setNuevos((ns) => [
-                ...ns,
-                { local: nuevaClave(), nombre: '', factor: '1', cantidad: '', costo: '', tarifa: '0', precio: '' },
-              ])
-            }
-          >
-            Agregar producto que aún no tengo
-          </Boton>
-        </div>
+          }}
+        />
       </Tarjeta>
 
       {paraEnviar && <AvisoError error={simulacion.error} />}
@@ -313,16 +214,14 @@ export function CuantoGano() {
         <div className="flex flex-col gap-2">
           {nuevos.length > 0 && (
             <p className="text-sm text-gray-600">
-              Para registrar la compra, los productos nuevos primero se crean en «Productos», o se sube la factura XML
-              del proveedor, que los crea sola.
+              Al registrar la compra, los productos nuevos se crean solos y quedan en «Productos» marcados «por
+              completar» para que les pongas código, categoría y foto.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            {nuevos.length === 0 && (
-              <Boton onClick={pasarACompra} icono={ShoppingBag}>
-                Registrar esta compra
-              </Boton>
-            )}
+            <Boton onClick={pasarACompra} icono={ShoppingBag}>
+              Registrar esta compra
+            </Boton>
             <Boton
               variante="secundario"
               onClick={() => {

@@ -32,6 +32,8 @@ export const esquemaProducto = z.object({
   controla_stock: z.boolean(),
   stock_minimo: decimal,
   activo: z.boolean(),
+  /** Creado desde una compra y todavía sin revisar (D-067). */
+  por_completar: z.boolean(),
   categoria_id: uuid.nullable(),
   categorias: z.object({ nombre: z.string() }).nullable(),
   presentaciones: z.array(esquemaPresentacion),
@@ -64,6 +66,7 @@ const COLUMNAS_PRODUCTO = [
   'controla_stock',
   'stock_minimo:stock_minimo::text',
   'activo',
+  'por_completar',
   'categoria_id',
   'categorias(nombre)',
   'presentaciones(id,nombre,factor:factor::text,precio_venta:precio_venta::text,codigo_barras,se_vende,se_compra,activo)',
@@ -104,6 +107,21 @@ export function stockDe(producto: Producto): string {
 /** La presentación base es la de factor 1 creada con el producto. */
 export function presentacionBase(producto: Producto): Presentacion | undefined {
   return producto.presentaciones.find((p) => Number(p.factor) === 1) ?? producto.presentaciones[0];
+}
+
+/** Lo que le falta a un producto creado desde una compra (D-067). */
+export function faltantesDe(p: Producto): string[] {
+  const faltan: string[] = [];
+  if (!p.presentaciones.some((r) => r.activo && r.se_vende && r.precio_venta !== null)) faltan.push('precio de venta');
+  if (!p.codigo_principal && !p.presentaciones.some((r) => r.codigo_barras)) faltan.push('código');
+  if (p.categoria_id === null) faltan.push('categoría');
+  if (p.imagen === null) faltan.push('foto');
+  return faltan;
+}
+
+/** Productos activos creados desde una compra que el Dueño aún no revisó. */
+export function porCompletar(productos: Producto[] | undefined): Producto[] {
+  return (productos ?? []).filter((p) => p.activo && p.por_completar);
 }
 
 export function bajoStock(producto: Producto): boolean {
@@ -202,6 +220,15 @@ export function useGuardarProducto() {
   return useMutation({
     mutationFn: ({ id, datos }: { id: string | null; datos: DatosProducto }) =>
       llamar('guardar_producto', { p_id: id, p_datos: datos }, esquemaId),
+    onSuccess: invalidar,
+  });
+}
+
+/** Ya se completó lo que faltaba de un producto creado desde una compra. */
+export function useMarcarRevisado() {
+  const invalidar = useInvalidarCatalogo();
+  return useMutation({
+    mutationFn: (id: string) => llamar('marcar_producto_revisado', { p_producto_id: id }, z.object({})),
     onSuccess: invalidar,
   });
 }
