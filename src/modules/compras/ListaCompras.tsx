@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Calculator, Upload } from 'lucide-react';
 import { formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
 import { AvisoError, Buscador, Cargando, EnlaceBoton, Encabezado, Tarjeta } from '@/shared/ui';
@@ -25,6 +25,9 @@ export function ListaCompras() {
           <>
             <EnlaceBoton href={enlace({ nombre: 'compra-factura' })} icono={Upload}>
               Desde factura XML
+            </EnlaceBoton>
+            <EnlaceBoton href={enlace({ nombre: 'compra-simular' })} icono={Calculator}>
+              ¿Cuánto gano?
             </EnlaceBoton>
             <EnlaceBoton href={enlace({ nombre: 'proveedores' })}>Proveedores</EnlaceBoton>
             <EnlaceBoton href={enlace({ nombre: 'compra-nueva' })} variante="primario">

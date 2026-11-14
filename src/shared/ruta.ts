@@ -14,6 +14,7 @@ export type Ruta =
   | { nombre: 'compras' }
   | { nombre: 'compra-nueva' }
   | { nombre: 'compra-factura' }
+  | { nombre: 'compra-simular' }
   | { nombre: 'compra'; id: string }
   | { nombre: 'proveedores' }
   | { nombre: 'vender' }
@@ -66,6 +67,7 @@ export function leerRuta(hash: string): Ruta {
     if (segunda === undefined) return { nombre: 'compras' };
     if (segunda === 'nueva') return { nombre: 'compra-nueva' };
     if (segunda === 'factura') return { nombre: 'compra-factura' };
+    if (segunda === 'simular') return { nombre: 'compra-simular' };
     return UUID.test(segunda) ? { nombre: 'compra', id: segunda } : { nombre: 'no-encontrada' };
   }
   if (primera !== 'productos') return { nombre: 'no-encontrada' };
@@ -99,6 +101,8 @@ export function enlace(ruta: Ruta): string {
       return '#/compras/nueva';
     case 'compra-factura':
       return '#/compras/factura';
+    case 'compra-simular':
+      return '#/compras/simular';
     case 'compra':
       return `#/compras/${ruta.id}`;
     case 'proveedores':

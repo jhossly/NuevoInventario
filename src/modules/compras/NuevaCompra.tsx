@@ -1,61 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useBorrador } from '@/shared/borrador';
-import { unidadCorta, useProductos, type Presentacion, type Producto } from '@/modules/catalogo/api';
-import { leerDecimal } from '@/shared/decimal';
+import { unidadCorta, useProductos } from '@/modules/catalogo/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace, navegar } from '@/shared/ruta';
 import { useUnSoloEnvio } from '@/shared/unSoloEnvio';
 import { nuevaClave } from '@/shared/uuid';
-import { Buscador, Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
+import { Aviso, AvisoError, Boton, Campo, Cargando, Casilla, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { ErrorDeNegocio } from '@/shared/rpc';
 import { FormProveedor } from './Proveedores';
-import { useCalculoCompra, useProveedores, useRegistrarCompra, type LineaCompra } from './api';
-
-interface LineaEnPantalla {
-  /** Solo para la key de React: la misma presentación puede repetirse. */
-  local: string;
-  producto: Producto;
-  presentacion: Presentacion;
-  cantidad: string;
-  costo: string;
-  descuento: string;
-  /** IVA de esta compra (D-064). Falta en borradores viejos: se usa el del producto. */
-  tarifa?: string;
-}
-
-/** Tarifas que se pueden elegir en una compra hoy. */
-const TARIFAS = ['0', '5', '15'];
-
-function tarifaDelProducto(p: Producto): string {
-  return String(Number(p.tarifa_iva));
-}
-
-function tarifaDe(l: LineaEnPantalla): string {
-  return l.tarifa ?? tarifaDelProducto(l.producto);
-}
-
-type Errores = Partial<Record<'cantidad' | 'costo' | 'descuento', string>>;
-
-function validarLinea(l: LineaEnPantalla): { errores: Errores; linea: LineaCompra | null } {
-  const errores: Errores = {};
-  const cantidad = leerDecimal(l.cantidad, { decimales: 3, permitirCero: false });
-  const costo = leerDecimal(l.costo, { decimales: 6 });
-  const descuento = l.descuento.trim() === '' ? ({ ok: true, valor: '0' } as const) : leerDecimal(l.descuento, { decimales: 2 });
-  if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
-  if (!costo.ok) errores.costo = costo.mensaje;
-  if (!descuento.ok) errores.descuento = descuento.mensaje;
-  if (!cantidad.ok || !costo.ok || !descuento.ok) return { errores, linea: null };
-  return {
-    errores,
-    linea: {
-      presentacion_id: l.presentacion.id,
-      cantidad: cantidad.valor,
-      costo_unitario: costo.valor,
-      descuento: descuento.valor,
-      tarifa_iva: tarifaDe(l),
-    },
-  };
-}
+import { useCalculoCompra, useProveedores, useRegistrarCompra } from './api';
+import { EditorLineas, lineasParaEnviar, type LineaEnPantalla } from './LineasCompra';
 
 function hoy(): string {
   // Fecha local del dispositivo (el Dueño está en Ecuador); la base valida de
@@ -63,6 +17,9 @@ function hoy(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+/** Nombre del borrador de líneas: «¿Cuánto gano?» lo llena al pasar a compra. */
+export const BORRADOR_LINEAS_COMPRA = 'compra:lineas';
 
 export function NuevaCompra() {
   const productos = useProductos();
@@ -75,8 +32,7 @@ export function NuevaCompra() {
   const [proveedorId, setProveedorId, borrar2] = useBorrador('compra:proveedor', '');
   const [numero, setNumero, borrar3] = useBorrador('compra:numero', '');
   const [fecha, setFecha, borrar4] = useBorrador('compra:fecha', hoy);
-  const [lineas, setLineas, borrar5] = useBorrador<LineaEnPantalla[]>('compra:lineas', []);
-  const [busqueda, setBusqueda] = useState('');
+  const [lineas, setLineas, borrar5] = useBorrador<LineaEnPantalla[]>(BORRADOR_LINEAS_COMPRA, []);
   const [nuevoProveedor, setNuevoProveedor] = useState(false);
   const [mostrarErrores, setMostrarErrores] = useState(false);
   const [errorCabecera, setErrorCabecera] = useState<string | null>(null);
@@ -84,9 +40,7 @@ export function NuevaCompra() {
   const [clave, , borrar6] = useBorrador('compra:clave', nuevaClave);
   const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6].forEach((b) => b());
 
-  const validadas = lineas.map(validarLinea);
-  const todasValidas = lineas.length > 0 && validadas.every((v) => v.linea !== null);
-  const paraEnviar = todasValidas ? validadas.map((v) => v.linea as LineaCompra) : null;
+  const { validadas, todasValidas, paraEnviar } = lineasParaEnviar(lineas);
   const calculo = useCalculoCompra(paraEnviar);
 
   // La base indica en qué línea está el problema (detalle.linea, desde 1).
@@ -94,39 +48,6 @@ export function NuevaCompra() {
     calculo.error instanceof ErrorDeNegocio
       ? Number((calculo.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
       : -1;
-
-  const opciones = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase();
-    if (texto === '') return [];
-    return (productos.data ?? [])
-      .filter((p) => p.activo && p.nombre.toLowerCase().includes(texto))
-      .flatMap((p) => p.presentaciones.filter((r) => r.activo && r.se_compra).map((r) => ({ producto: p, presentacion: r })))
-      .slice(0, 12);
-  }, [productos.data, busqueda]);
-
-  // «Esta factura trae IVA 15 %»: marcada si todas las líneas van con 15 %.
-  const todasCon15 = lineas.length > 0 && lineas.every((l) => tarifaDe(l) === '15');
-  const ponerTodasCon15 = (si: boolean) =>
-    setLineas((ls) => ls.map((l) => ({ ...l, tarifa: si ? '15' : tarifaDelProducto(l.producto) })));
-
-  const agregar = (producto: Producto, presentacion: Presentacion) => {
-    setLineas((ls) => [
-      ...ls,
-      {
-        local: nuevaClave(),
-        producto,
-        presentacion,
-        cantidad: '',
-        costo: '',
-        descuento: '',
-        tarifa: todasCon15 ? '15' : tarifaDelProducto(producto),
-      },
-    ]);
-    setBusqueda('');
-  };
-
-  const cambiar = (indice: number, cambios: Partial<LineaEnPantalla>) =>
-    setLineas((ls) => ls.map((l, i) => (i === indice ? { ...l, ...cambios } : l)));
 
   const confirmar = () => {
     setMostrarErrores(true);
@@ -220,123 +141,25 @@ export function NuevaCompra() {
 
       <Tarjeta className="mb-4">
         <h2 className="mb-2 font-semibold">Productos</h2>
-        <p className="mb-3 text-sm text-gray-500">
-          Costos por presentación, sin IVA, como vienen en la factura. El IVA es el que cobró el proveedor: cambiarlo
-          aquí no cambia el producto ni cómo se vende.
-        </p>
-        {lineas.length > 0 && (
-          <div className="mb-3">
-            <Casilla
-              etiqueta="Esta factura trae IVA 15 % en todo"
-              checked={todasCon15}
-              onChange={(e) => ponerTodasCon15(e.target.checked)}
-            />
-          </div>
-        )}
-
-        <ol className="flex flex-col gap-3">
-          {lineas.map((l, i) => {
-            const errores = mostrarErrores ? (validadas[i]?.errores ?? {}) : {};
+        <EditorLineas
+          productos={productos.data ?? []}
+          lineas={lineas}
+          setLineas={setLineas}
+          validadas={validadas}
+          mostrarErrores={mostrarErrores}
+          lineaConError={lineaConError}
+          debajo={(l, i) => {
             const calculada = calculo.data?.lineas[i];
+            if (!calculada || !todasValidas) return null;
             const unidad = unidadCorta(l.producto.unidad_base);
             return (
-              <li
-                key={l.local}
-                className={`rounded-lg border p-3 ${lineaConError === i ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
-              >
-                <div className="mb-2 flex items-start gap-2">
-                  <p className="flex-1 font-medium">
-                    {l.producto.nombre} — {l.presentacion.nombre}
-                    <span className="block text-sm font-normal text-gray-500">
-                      {formatearCantidad(l.presentacion.factor)} {unidad}
-                      {tarifaDe(l) !== tarifaDelProducto(l.producto) &&
-                        ` · se vende con IVA ${tarifaDelProducto(l.producto)} %`}
-                    </span>
-                  </p>
-                  <Boton
-                    variante="secundario"
-                    aria-label={`Quitar ${l.producto.nombre}`}
-                    onClick={() => setLineas((ls) => ls.filter((_, j) => j !== i))}
-                  >
-                    ✕
-                  </Boton>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Campo
-                    etiqueta="Cantidad"
-                    inputMode="decimal"
-                    value={l.cantidad}
-                    onChange={(e) => cambiar(i, { cantidad: e.target.value })}
-                    error={errores.cantidad}
-                  />
-                  <Campo
-                    etiqueta="Costo c/u"
-                    inputMode="decimal"
-                    value={l.costo}
-                    onChange={(e) => cambiar(i, { costo: e.target.value })}
-                    error={errores.costo}
-                  />
-                  <Campo
-                    etiqueta="Descuento $"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={l.descuento}
-                    onChange={(e) => cambiar(i, { descuento: e.target.value })}
-                    error={errores.descuento}
-                  />
-                  <Selector
-                    etiqueta="IVA de la compra"
-                    value={tarifaDe(l)}
-                    onChange={(e) => cambiar(i, { tarifa: e.target.value })}
-                  >
-                    {[...new Set([...TARIFAS, tarifaDelProducto(l.producto)])].map((t) => (
-                      <option key={t} value={t}>
-                        {t} %
-                      </option>
-                    ))}
-                  </Selector>
-                </div>
-                {calculada && todasValidas && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    {formatearDinero(calculada.subtotal)} + IVA {formatearDinero(calculada.iva)} · entran{' '}
-                    {formatearCantidad(calculada.cantidad_base)} {unidad} a {formatearCosto(calculada.costo_unitario_base)}
-                  </p>
-                )}
-              </li>
+              <p className="mt-2 text-sm text-gray-600">
+                {formatearDinero(calculada.subtotal)} + IVA {formatearDinero(calculada.iva)} · entran{' '}
+                {formatearCantidad(calculada.cantidad_base)} {unidad} a {formatearCosto(calculada.costo_unitario_base)}
+              </p>
             );
-          })}
-        </ol>
-
-        <div className="mt-3">
-          <Buscador
-            etiqueta="Agregar producto: escribe el nombre"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-          {opciones.length > 0 && (
-            <ul className="mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-              {opciones.map(({ producto, presentacion }) => (
-                <li key={presentacion.id}>
-                  <button
-                    type="button"
-                    onClick={() => agregar(producto, presentacion)}
-                    className="flex min-h-11 w-full items-center justify-between px-3 text-left hover:bg-gray-50"
-                  >
-                    <span>
-                      {producto.nombre} — {presentacion.nombre}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {formatearCantidad(presentacion.factor)} {unidadCorta(producto.unidad_base)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {busqueda.trim() !== '' && opciones.length === 0 && (
-            <p className="mt-2 text-sm text-gray-500">Ningún producto activo con presentación de compra coincide.</p>
-          )}
-        </div>
+          }}
+        />
       </Tarjeta>
 
       <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-gray-200 bg-gray-50 p-4">

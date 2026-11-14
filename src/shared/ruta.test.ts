@@ -21,6 +21,7 @@ describe('leerRuta', () => {
       { nombre: 'compras' },
       { nombre: 'compra-nueva' },
       { nombre: 'compra-factura' },
+      { nombre: 'compra-simular' },
       { nombre: 'compra', id: ID },
       { nombre: 'proveedores' },
       { nombre: 'vender' },

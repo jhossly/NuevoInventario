@@ -345,3 +345,34 @@ export function useUtilidadCompra(compraId: string) {
     queryFn: () => llamar('utilidad_estimada_compra', { p_compra_id: compraId }, esquemaUtilidad),
   });
 }
+
+// -----------------------------------------------------------------------------
+// Calculadora «¿Cuánto gano?» (D-065): las cuentas de la compra sin registrarla
+// -----------------------------------------------------------------------------
+const esquemaSimulacion = esquemaUtilidad.omit({ compra: true }).extend({
+  compra: z.object({ subtotal: decimal, descuento: decimal, iva: decimal, total: decimal }),
+  detalle: z.array(
+    z.object({
+      orden: z.number(),
+      costo_unidad: decimal,
+      costo_anterior: decimal.nullable(),
+      fecha_anterior: z.string().nullable(),
+      proveedor_anterior: z.string().nullable(),
+      presentacion_venta: z.string().nullable(),
+      precio_actual: decimal.nullable(),
+      precio_sugerido: decimal.nullable(),
+    }),
+  ),
+});
+export type Simulacion = z.infer<typeof esquemaSimulacion>;
+
+/** margen como fracción en texto ("0.20"). */
+export function useSimularCompra(lineas: LineaCompra[] | null, margen: string | null) {
+  return useQuery({
+    queryKey: ['compras', 'simular', lineas ?? [], margen],
+    queryFn: () => llamar('simular_compra', { p_lineas: lineas, p_margen: margen }, esquemaSimulacion),
+    enabled: lineas !== null && lineas.length > 0 && margen !== null,
+    placeholderData: (anterior) => anterior,
+    retry: false,
+  });
+}

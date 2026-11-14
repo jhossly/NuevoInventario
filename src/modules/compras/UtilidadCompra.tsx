@@ -19,9 +19,14 @@ export function LineaUtilidad({ linea }: { linea: UtilidadLinea }) {
 }
 
 /** Lo que se va a pagar, con lo que de verdad llegó. */
-export function TotalCompra({ compra }: { compra: NonNullable<Utilidad['compra']> }) {
+export function TotalCompra({
+  compra,
+}: {
+  compra: { subtotal: string; descuento: string; iva: string; total: string; otros?: string; total_factura?: string };
+}) {
   // Hasta 5 centavos es redondeo del SRI (D-056), no algo que faltó.
-  const distinto = Math.abs(Number(compra.total) - Number(compra.total_factura)) > 0.05;
+  const distinto =
+    compra.total_factura !== undefined && Math.abs(Number(compra.total) - Number(compra.total_factura)) > 0.05;
   return (
     <Tarjeta className="mb-4">
       <h2 className="mb-2 flex items-center gap-2 font-semibold">
@@ -39,10 +44,10 @@ export function TotalCompra({ compra }: { compra: NonNullable<Utilidad['compra']
         )}
         <dt className="text-gray-600">IVA</dt>
         <dd className="text-right">{formatearDinero(compra.iva)}</dd>
-        {Number(compra.otros) > 0 && (
+        {Number(compra.otros ?? 0) > 0 && (
           <>
             <dt className="text-gray-600">ICE y otros impuestos</dt>
-            <dd className="text-right">{formatearDinero(compra.otros)}</dd>
+            <dd className="text-right">{formatearDinero(compra.otros ?? 0)}</dd>
           </>
         )}
         <dt className="text-base font-bold">Total</dt>
@@ -50,7 +55,7 @@ export function TotalCompra({ compra }: { compra: NonNullable<Utilidad['compra']
       </dl>
       {distinto && (
         <p className="mt-2 text-sm text-amber-800">
-          La factura dice {formatearDinero(compra.total_factura)}: la diferencia es por lo que no llegó.
+          La factura dice {formatearDinero(compra.total_factura ?? '0')}: la diferencia es por lo que no llegó.
         </p>
       )}
     </Tarjeta>
@@ -58,7 +63,13 @@ export function TotalCompra({ compra }: { compra: NonNullable<Utilidad['compra']
 }
 
 /** El resumen de la compra: lo que quedaría si se vende todo a los precios de hoy. */
-export function ResumenUtilidad({ utilidad, className = '' }: { utilidad: Utilidad; className?: string }) {
+export function ResumenUtilidad({
+  utilidad,
+  className = '',
+}: {
+  utilidad: Omit<Utilidad, 'compra'>;
+  className?: string;
+}) {
   const perdida = utilidad.utilidad.startsWith('-');
   return (
     <Tarjeta className={className}>

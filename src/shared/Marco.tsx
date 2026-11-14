@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
+  Calculator,
   ChartColumn,
   ClipboardCheck,
   FileText,
@@ -60,6 +61,13 @@ const GRUPOS: { titulo: string; secciones: Seccion[] }[] = [
         icono: Truck,
         ruta: { nombre: 'compras' },
         incluye: ['compras', 'compra-nueva', 'compra-factura', 'compra'],
+        soloDueno: true,
+      },
+      {
+        titulo: '¿Cuánto gano?',
+        icono: Calculator,
+        ruta: { nombre: 'compra-simular' },
+        incluye: ['compra-simular'],
         soloDueno: true,
       },
       { titulo: 'Proveedores', icono: Warehouse, ruta: { nombre: 'proveedores' }, incluye: ['proveedores'], soloDueno: true },

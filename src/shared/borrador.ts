@@ -73,3 +73,16 @@ export function borrarBorradoresDe(correo: string) {
     // Nada que hacer.
   }
 }
+
+/**
+ * Leer y escribir un borrador de otra pantalla, del usuario que está dentro:
+ * así «¿Cuánto gano?» pasa sus líneas a «Nueva compra».
+ */
+export function useBorradorAjeno() {
+  const sesion = useSesion();
+  const usuario = sesion.estado === 'lista' ? sesion.correo : 'anonimo';
+  return {
+    leer: useCallback(<T,>(nombre: string) => leer<T>(`${PREFIJO}${usuario}:${nombre}`), [usuario]),
+    escribir: useCallback((nombre: string, valor: unknown) => escribir(`${PREFIJO}${usuario}:${nombre}`, valor), [usuario]),
+  };
+}
