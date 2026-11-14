@@ -366,8 +366,8 @@ const esquemaSimulacion = esquemaUtilidad.omit({ compra: true }).extend({
 });
 export type Simulacion = z.infer<typeof esquemaSimulacion>;
 
-/** margen como fracción en texto ("0.20"). */
-export function useSimularCompra(lineas: LineaCompra[] | null, margen: string | null) {
+/** Líneas como en calcular_compra, o {nuevo} para un producto que aún no existe (D-066). margen como fracción en texto ("0.20"). */
+export function useSimularCompra(lineas: object[] | null, margen: string | null) {
   return useQuery({
     queryKey: ['compras', 'simular', lineas ?? [], margen],
     queryFn: () => llamar('simular_compra', { p_lineas: lineas, p_margen: margen }, esquemaSimulacion),

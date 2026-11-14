@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-14 (calculadora «¿Cuánto gano?», D-065; local, sin subir)
+Última actualización: 2026-11-14 (calculadora «¿Cuánto gano?» con productos nuevos, D-065 y D-066; local, sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-065). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-066). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -75,6 +75,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261114000000_total_compra.sql` | `estimar_utilidad_factura` devuelve también `compra` (subtotal, descuento, IVA, otros, total y total de la factura) |
 | `20261115000000_iva_por_linea_compra.sql` | `calcular_lineas_compra` acepta `tarifa_iva` por línea: el IVA que cobró el proveedor en la compra a mano (D-064) |
 | `20261116000000_simular_compra.sql` | `simular_compra(p_lineas, p_margen)`: total, utilidad, costo anterior y precio sugerido sin registrar nada (D-065) |
+| `20261117000000_simular_productos_nuevos.sql` | `simular_compra` acepta líneas `nuevo` (producto que aún no existe) (D-066) |
 
 Edge Function `supabase/functions/facturar`: `firma.ts` (XAdES-BES con node-forge), `sri.ts` (SOAP), `index.ts`. Secretos: `FIRMA_P12_BASE64`, `FIRMA_CONTRASENA`. Interfaz: `src/modules/facturacion` (estado en la venta, RIDE imprimible en `#/factura/<venta>`, configuración en Mi negocio); «Vender» emite solo al cobrar con Factura.
 
@@ -136,6 +137,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-14 | pgTAP 020 (9) + navegador local | Producto que aún no existe: 2 bultos de 12 a $6 + 15 % = $13,80, $0,575 c/u, vendiendo a $0,75 gana $1,85 (11,8 %), sugiere $0,83 para 20 %; con productos nuevos no aparece «Registrar esta compra» y se explica por qué | **Funciona**; pgTAP 542/542, Vitest 62/62 |
 | 2026-11-14 | pgTAP 019 (10) + navegador local, escritorio y 375 px | «¿Cuánto gano?»: 2 cajas de aceite a $30 + 15 % = $69, $2,875 c/u, gana $3,00 (4,2 %), sugiere $4,14 para 20 % (hoy $3,45); «Registrar esta compra» lleva cantidad, costo e IVA a «Nueva compra» y vacía la calculadora | **Funciona**; pgTAP 533/533, Vitest 62/62, sin errores en consola |
 | 2026-11-12 | GitHub Actions, run 43335585280, commit `754bb8b`; Vercel; `db push` de 20261115 | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-12 | pgTAP 018 (8) + navegador local | Arroz (0 %) comprado con «Esta factura trae IVA 15 %»: $10 + IVA $1,50 = $11,50, entran 10 kg a $1,15 y la utilidad usa ese costo; el producto sigue en 0 %. Sin tarifa usa la del producto; tarifa 7 o texto se rechaza | **Funciona**; pgTAP 523/523, Vitest 62/62 |
