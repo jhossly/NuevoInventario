@@ -2,7 +2,7 @@ import { useState, type Dispatch, type ReactNode, type SetStateAction } from 're
 import { CircleCheck, PackagePlus } from 'lucide-react';
 import { unidadCorta, type Producto } from '@/modules/catalogo/api';
 import { leerDecimal } from '@/shared/decimal';
-import { formatearCantidad, formatearDinero } from '@/shared/formato';
+import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { nuevaClave } from '@/shared/uuid';
 import { Aviso, Boton, Campo, Casilla, Selector } from '@/shared/ui';
 
@@ -70,8 +70,7 @@ export function prepararItems(items: ItemCompra[], opciones: OpcionesCompra) {
     const costo = leerDecimal(it.costo, { decimales: 6 });
     const descuento =
       it.descuento.trim() === '' ? ({ ok: true, valor: '0' } as const) : leerDecimal(it.descuento, { decimales: 2 });
-    const precio =
-      it.productoId || it.precio.trim() === '' ? ({ ok: true, valor: '' } as const) : leerDecimal(it.precio, { decimales: 2 });
+    const precio = it.precio.trim() === '' ? ({ ok: true, valor: '' } as const) : leerDecimal(it.precio, { decimales: 2 });
     if (!it.productoId && it.nombre.trim() === '') errores.nombre = 'Escribe el nombre';
     if (!factor.ok) errores.factor = factor.mensaje;
     if (!cantidad.ok) errores.cantidad = cantidad.mensaje;
@@ -88,18 +87,58 @@ export function prepararItems(items: ItemCompra[], opciones: OpcionesCompra) {
       descuento: opciones.conIva ? sinIva(descuento.valor, tarifa, 2) : descuento.valor,
       tarifa_iva: tarifa,
     };
+    // En un producto que ya existe, el precio escrito es el que se piensa poner (D-069).
     const linea = it.productoId
-      ? { producto_id: it.productoId, factor: factor.valor, ...comunes }
+      ? { producto_id: it.productoId, factor: factor.valor, precio_venta: precio.valor, ...comunes }
       : { nuevo: { nombre: it.nombre.trim(), factor: factor.valor, precio_venta: precio.valor }, ...comunes };
     return { errores, linea: linea as object };
   });
   const listas = items.length > 0 && validados.every((v) => v.linea !== null);
-  return { validados, lineas: listas ? validados.map((v) => v.linea as object) : null };
+  // Las líneas completas se calculan aunque falte otra (`indices` dice de qué línea es cada una).
+  const indices = validados.flatMap((v, i) => (v.linea ? [i] : []));
+  return {
+    validados,
+    lineas: listas ? validados.map((v) => v.linea as object) : null,
+    parcial: indices.length > 0 ? indices.map((i) => validados[i]!.linea as object) : null,
+    indices,
+  };
+}
+
+const NOMBRES_CAMPO: Record<keyof ErroresItem, string> = {
+  nombre: 'nombre',
+  factor: 'unidades por bulto',
+  cantidad: 'bultos',
+  costo: 'costo del bulto',
+  descuento: 'descuento',
+  precio: 'precio',
+};
+
+/** Precio por unidad base de hoy: el de la presentación vendible más pequeña. */
+export function precioUnidadHoy(p: Producto): string | null {
+  const r = [...p.presentaciones]
+    .filter((x) => x.activo && x.se_vende && x.precio_venta !== null)
+    .sort((a, b) => Number(a.factor) - Number(b.factor))[0];
+  return r ? (Number(r.precio_venta) / Number(r.factor)).toFixed(4) : null;
 }
 
 /** Compara sin tildes ni mayúsculas. */
 function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+}
+
+/** Qué le falta a una línea para poder calcularla; nada si está vacía o completa. */
+function Falta({ errores, item }: { errores?: ErroresItem; item: ItemCompra }) {
+  const faltan = Object.keys(errores ?? {}) as (keyof ErroresItem)[];
+  const empezada = item.productoId || [item.nombre, item.cantidad, item.costo].some((v) => v.trim() !== '');
+  if (faltan.length === 0) return null;
+  if (!empezada) {
+    return <p className="mt-2 text-sm text-gray-500">Línea vacía: escribe el producto o quítala con ✕.</p>;
+  }
+  return (
+    <p className="mt-2 text-sm text-amber-800">
+      Para ver la cuenta falta: {faltan.map((c) => NOMBRES_CAMPO[c]).join(', ')}.
+    </p>
+  );
 }
 
 /** Compara el total escrito de la factura con el calculado. */
@@ -142,7 +181,9 @@ export function EditorCompra({
   mostrarErrores,
   lineaConError,
   totalCalculado,
+  incompletos = 0,
   etiquetaPrecio,
+  avisarCambioPrecio = false,
   debajo,
 }: {
   productos: Producto[];
@@ -155,7 +196,11 @@ export function EditorCompra({
   /** Índice desde 0 de la línea que la base rechazó, o -1. */
   lineaConError: number;
   totalCalculado?: string;
+  /** Líneas que faltan completar: el total calculado no las cuenta. */
+  incompletos?: number;
   etiquetaPrecio: string;
+  /** En «Nueva compra»: el precio escrito de un producto existente se guarda al registrar. */
+  avisarCambioPrecio?: boolean;
   debajo?: (item: ItemCompra, indice: number) => ReactNode;
 }) {
   const [enfocado, setEnfocado] = useState<string | null>(null);
@@ -299,7 +344,7 @@ export function EditorCompra({
                   ✕
                 </Boton>
               </div>
-              <div className={`grid grid-cols-2 gap-2 ${producto ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`}>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
                 <Campo
                   etiqueta={producto ? `${unidadCorta(producto.unidad_base)} por bulto` : 'Unidades por bulto'}
                   inputMode="decimal"
@@ -340,17 +385,25 @@ export function EditorCompra({
                     </option>
                   ))}
                 </Selector>
-                {!producto && (
-                  <Campo
-                    etiqueta={etiquetaPrecio}
-                    inputMode="decimal"
-                    placeholder="Opcional"
-                    value={it.precio}
-                    onChange={(e) => cambiar(i, { precio: e.target.value })}
-                    error={errores.precio}
-                  />
-                )}
+                <Campo
+                  etiqueta={etiquetaPrecio}
+                  inputMode="decimal"
+                  placeholder={
+                    producto && precioUnidadHoy(producto) ? `hoy ${formatearCosto(precioUnidadHoy(producto)!)}` : 'Opcional'
+                  }
+                  value={it.precio}
+                  onChange={(e) => cambiar(i, { precio: e.target.value })}
+                  error={errores.precio}
+                />
               </div>
+              <Falta errores={validados[i]?.errores} item={it} />
+              {avisarCambioPrecio && producto && it.precio.trim() !== '' && !errores.precio && (
+                <p className="mt-2 text-sm text-amber-800">
+                  Al registrar, {producto.nombre} pasa a venderse a {formatearDinero(it.precio.replace(',', '.'))} c/u
+                  {precioUnidadHoy(producto) && ` (hoy ${formatearCosto(precioUnidadHoy(producto)!)})`}, también lo que ya
+                  tienes en stock. Déjalo vacío para no cambiar el precio.
+                </p>
+              )}
               {debajo?.(it, i)}
             </li>
           );
@@ -363,7 +416,13 @@ export function EditorCompra({
             Agregar producto
           </Boton>
         </div>
-        <ComparaTotal opciones={opciones} total={totalCalculado} />
+        {incompletos > 0 && totalCalculado !== undefined && (
+          <p className="text-sm text-amber-800">
+            {incompletos === 1 ? 'Falta completar 1 producto' : `Faltan completar ${incompletos} productos`}: los totales
+            todavía no lo{incompletos === 1 ? '' : 's'} cuentan.
+          </p>
+        )}
+        <ComparaTotal opciones={opciones} total={incompletos > 0 ? undefined : totalCalculado} />
       </div>
     </>
   );

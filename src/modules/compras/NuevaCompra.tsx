@@ -42,16 +42,22 @@ export function NuevaCompra() {
   const [clave, , borrar6] = useBorrador('compra:clave', nuevaClave);
   const borrarTodo = () => [borrar1, borrar2, borrar3, borrar4, borrar5, borrar6, borrar7].forEach((b) => b());
 
-  const { validados, lineas } = prepararItems(items, opciones);
-  // Las mismas cuentas del registro, sin guardar: totales y lo que entra por línea.
-  const simulacion = useSimularCompra(lineas, '0.2');
-  const datos = lineas ? simulacion.data : undefined;
+  const { validados, lineas, parcial, indices } = prepararItems(items, opciones);
+  // Las mismas cuentas del registro, sin guardar, con las líneas ya completas.
+  const simulacion = useSimularCompra(parcial, '0.2');
+  const datos = parcial ? simulacion.data : undefined;
+  const incompletos = items.length - indices.length;
 
-  // La base indica en qué línea está el problema (detalle.linea, desde 1).
-  const conLinea = [registrar.error, simulacion.error].find((e) => e instanceof ErrorDeNegocio) as
-    | ErrorDeNegocio
-    | undefined;
-  const lineaConError = conLinea ? Number((conLinea.detalle as { linea?: number } | null)?.linea ?? 0) - 1 : -1;
+  // La base indica en qué línea está el problema (detalle.linea, desde 1). La
+  // simulación cuenta solo las completas; el registro, todas.
+  const lineaDe = (e: unknown) =>
+    e instanceof ErrorDeNegocio ? Number((e.detalle as { linea?: number } | null)?.linea ?? 0) : 0;
+  const lineaConError =
+    lineaDe(registrar.error) > 0
+      ? lineaDe(registrar.error) - 1
+      : lineaDe(simulacion.error) > 0
+        ? (indices[lineaDe(simulacion.error) - 1] ?? -1)
+        : -1;
   const nuevos = items.filter((it) => !it.productoId).length;
 
   const confirmar = () => {
@@ -156,9 +162,11 @@ export function NuevaCompra() {
           mostrarErrores={mostrarErrores}
           lineaConError={lineaConError}
           totalCalculado={datos?.compra.total}
+          incompletos={incompletos}
           etiquetaPrecio="Precio de venta c/u"
+          avisarCambioPrecio
           debajo={(_, i) => {
-            const d = datos?.detalle[i];
+            const d = datos?.detalle[indices.indexOf(i)];
             if (!d) return null;
             return (
               <p className="mt-2 text-sm text-gray-600">
@@ -189,11 +197,11 @@ export function NuevaCompra() {
             )}
             <dt className="text-gray-600">IVA</dt>
             <dd className="text-right">{formatearDinero(datos.compra.iva)}</dd>
-            <dt className="font-semibold">Total</dt>
+            <dt className="font-semibold">Total{incompletos > 0 && ' (sin las incompletas)'}</dt>
             <dd className="text-right font-semibold">{formatearDinero(datos.compra.total)}</dd>
           </dl>
         )}
-        {lineas && <AvisoError error={simulacion.error} />}
+        {parcial && <AvisoError error={simulacion.error} />}
         {errorCabecera && <Aviso>{errorCabecera}</Aviso>}
         <AvisoError error={registrar.error} />
         <Boton onClick={confirmar} disabled={registrar.isPending}>

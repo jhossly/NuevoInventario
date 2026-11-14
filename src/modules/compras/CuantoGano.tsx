@@ -90,15 +90,17 @@ export function CuantoGano() {
   const [margen, setMargen] = useBorrador('simular:margen', '20');
   const [mostrarErrores, setMostrarErrores] = useState(false);
 
-  const { validados, lineas } = prepararItems(items, opciones);
+  const { validados, lineas, parcial, indices } = prepararItems(items, opciones);
+  const incompletos = items.length - indices.length;
   const margenLeido = leerDecimal(margen, { decimales: 2 });
   const margenValido = margenLeido.ok && Number(margenLeido.valor) < 90;
-  const simulacion = useSimularCompra(lineas, margenValido ? String(Number(margenLeido.valor) / 100) : null);
-  const datos = lineas ? simulacion.data : undefined;
+  // Se calcula con las líneas ya completas, aunque falte alguna.
+  const simulacion = useSimularCompra(parcial, margenValido ? String(Number(margenLeido.valor) / 100) : null);
+  const datos = parcial ? simulacion.data : undefined;
 
   const lineaConError =
     simulacion.error instanceof ErrorDeNegocio
-      ? Number((simulacion.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1
+      ? (indices[Number((simulacion.error.detalle as { linea?: number } | null)?.linea ?? 0) - 1] ?? -1)
       : -1;
 
   const pasarACompra = () => {
@@ -159,9 +161,10 @@ export function CuantoGano() {
           mostrarErrores={mostrarErrores}
           lineaConError={lineaConError}
           totalCalculado={datos?.compra.total}
+          incompletos={incompletos}
           etiquetaPrecio="Venderías c/u a"
           debajo={(_, i) => {
-            const d = datos?.detalle[i];
+            const d = datos?.detalle[indices.indexOf(i)];
             if (!d) return null;
             return (
               <div className="mt-2">
@@ -173,7 +176,7 @@ export function CuantoGano() {
         />
       </Tarjeta>
 
-      {lineas && <AvisoError error={simulacion.error} />}
+      {parcial && <AvisoError error={simulacion.error} />}
       {datos && (
         <>
           <TotalCompra compra={datos.compra} />
