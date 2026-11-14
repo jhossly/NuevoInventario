@@ -208,13 +208,25 @@ export function EditorCompra({
     setItems((xs) => xs.map((x, i) => (i === indice ? { ...x, ...cambios } : x)));
   const porId = new Map(productos.map((p) => [p.id, p]));
 
+  // Busca por nombre, código principal o auxiliar y código de barras. Si el
+  // código es el de una presentación, esa sale primero (el escáner lo escribe).
   const parecidos = (nombre: string) => {
     const texto = normalizar(nombre.trim());
     if (texto.length < 2) return [];
-    return productos
-      .filter((p) => p.activo && normalizar(p.nombre).includes(texto))
-      .flatMap((p) => p.presentaciones.filter((r) => r.activo && r.se_compra).map((r) => ({ producto: p, presentacion: r })))
-      .slice(0, 8);
+    const codigoCoincide = (c: string | null) => c !== null && normalizar(c).includes(texto);
+    const opciones = productos
+      .filter(
+        (p) =>
+          p.activo &&
+          (normalizar(p.nombre).includes(texto) ||
+            codigoCoincide(p.codigo_principal) ||
+            codigoCoincide(p.codigo_auxiliar) ||
+            p.presentaciones.some((r) => codigoCoincide(r.codigo_barras))),
+      )
+      .flatMap((p) => p.presentaciones.filter((r) => r.activo && r.se_compra).map((r) => ({ producto: p, presentacion: r })));
+    const exacta = (o: (typeof opciones)[number]) =>
+      o.presentacion.codigo_barras !== null && normalizar(o.presentacion.codigo_barras) === texto ? 0 : 1;
+    return opciones.sort((a, b) => exacta(a) - exacta(b)).slice(0, 8);
   };
 
   return (
@@ -296,7 +308,7 @@ export function EditorCompra({
                     <>
                       <Campo
                         etiqueta="Producto"
-                        placeholder="Escribe el nombre: si ya lo tienes, aparece"
+                        placeholder="Nombre o código: si ya lo tienes, aparece"
                         autoComplete="off"
                         value={it.nombre}
                         onFocus={() => setEnfocado(it.local)}

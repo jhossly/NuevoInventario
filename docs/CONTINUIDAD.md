@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-14 (precio en compras para productos existentes y cuenta con líneas incompletas, D-069; local, sin subir)
+Última actualización: 2026-11-14 (precio en compras, cuenta con líneas incompletas y búsqueda por código, D-069 y D-070; local, sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-069). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-070). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
