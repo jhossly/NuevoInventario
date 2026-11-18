@@ -87,7 +87,6 @@ export function ImportarProductos() {
   const importar = useImportarProductos();
   const [filas, setFilas, borrarFilas] = useBorrador<Fila[]>('importar:filas', []);
   const [opciones, setOpciones] = useBorrador<Opciones>('importar:opciones', { tarifa: '15', categoriaHoja: true });
-  const [archivo, setArchivo, borrarArchivo] = useBorrador<string | null>('importar:archivo', null);
   const [leyendo, setLeyendo] = useState(false);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
   const [hoja, setHoja] = useState('');
@@ -129,7 +128,6 @@ export function ImportarProductos() {
           costo: '',
         })),
       );
-      setArchivo(elegido.name);
       setHoja('');
     } catch (e) {
       setErrorArchivo(e instanceof Error ? e.message : 'No se pudo leer el archivo');
@@ -151,7 +149,6 @@ export function ImportarProductos() {
         onSuccess: (r) => {
           setResultado(r);
           borrarFilas();
-          borrarArchivo();
           setMostrarErrores(false);
         },
       },
@@ -329,7 +326,6 @@ export function ImportarProductos() {
                 variante="secundario"
                 onClick={() => {
                   borrarFilas();
-                  borrarArchivo();
                   setMostrarErrores(false);
                 }}
               >
