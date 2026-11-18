@@ -53,7 +53,7 @@ const GRUPOS: { titulo: string; secciones: Seccion[] }[] = [
         titulo: 'Productos',
         icono: Package,
         ruta: { nombre: 'productos' },
-        incluye: ['productos', 'producto-nuevo', 'producto', 'ajuste', 'kardex'],
+        incluye: ['productos', 'producto-nuevo', 'productos-importar', 'producto', 'ajuste', 'kardex'],
       },
       { titulo: 'Conteo', icono: ClipboardCheck, ruta: { nombre: 'conteo' }, incluye: ['conteo'], soloDueno: true },
       { titulo: 'Medidas', icono: Ruler, ruta: { nombre: 'medidas' }, incluye: ['medidas'], soloDueno: true },

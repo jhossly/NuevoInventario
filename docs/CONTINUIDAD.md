@@ -3,7 +3,7 @@
 Resumen compacto para retomar el trabajo en una conversación nueva.
 **Pégalo completo al inicio de la nueva conversación.** Actualízalo al cerrar cada sesión importante.
 
-Última actualización: 2026-11-14 (precio en compras, cuenta con líneas incompletas y búsqueda por código, D-069 y D-070; publicado)
+Última actualización: 2026-11-17 (importar productos desde Excel, D-071; local, sin subir)
 
 ---
 
@@ -19,7 +19,7 @@ Sistema web (PWA) de inventario, compras, ventas, fiado y caja para **una bodega
 
 ## Decisiones clave
 
-Ver `docs/DECISIONES.md` (D-001 a D-070). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
+Ver `docs/DECISIONES.md` (D-001 a D-071). Las esenciales: costo promedio ponderado, bloqueo de ventas sin stock, reglas en funciones SQL, libro de movimientos inmutable, cuatro barreras de seguridad y el Vendedor sin ver costos.
 
 ## Tecnologías
 
@@ -79,6 +79,7 @@ React 18 + Vite + TypeScript estricto, Tailwind, TanStack Query, Zod, Supabase (
 | `20261118000000_compra_con_productos_nuevos.sql` | `productos.por_completar`, `registrar_compra_con_nuevos` y `marcar_producto_revisado` (D-067) |
 | `20261119000000_compra_por_bultos.sql` | `simular_compra` y `registrar_compra_con_nuevos` aceptan `producto_id` + `factor`; la simulación responde en el orden enviado y con la cuenta de cada línea (D-068) |
 | `20261120000000_precio_en_compra.sql` | `precio_venta` en líneas de productos existentes: `simular_compra` lo usa y `registrar_compra_con_nuevos` lo guarda (`privado.poner_precio_unidad`) (D-069) |
+| `20261121000000_importar_productos.sql` | `importar_productos(p_filas, p_tarifa_iva)`: crea los que no existen, categoría por nombre, apertura con costo, por completar (D-071) |
 
 Edge Function `supabase/functions/facturar`: `firma.ts` (XAdES-BES con node-forge), `sri.ts` (SOAP), `index.ts`. Secretos: `FIRMA_P12_BASE64`, `FIRMA_CONTRASENA`. Interfaz: `src/modules/facturacion` (estado en la venta, RIDE imprimible en `#/factura/<venta>`, configuración en Mi negocio); «Vender» emite solo al cobrar con Factura.
 
@@ -140,6 +141,7 @@ Interfaz (Fase 6): ingreso con correo y contraseña; rutas por `#hash` (`src/sha
 | 2026-10-27 | Navegador, 1024 px, datos del seed | Subir un XML con el código desconocido GALL-AMOR; «Crear producto» abre el formulario con «Galletas Amor 50 g», GALL-AMOR, 0 % y $0,55; al crearlo la línea queda asociada y la factura «lista para resolver». Typecheck y Vitest (49) pasan | **Todo funciona**; sin errores en consola |
 | 2026-11-01 | Windows 11 del usuario: firma | El verificador reproduce los dos digests y la firma RSA de una factura real autorizada del dueño (el XML no se guarda en el repositorio); el formato del emisor coincide. `firma.test.ts` (10) con firma propia | **Coincide con el SRI real**; Vitest 59/59 |
 | 2026-11-01 | Windows 11 del usuario: Supabase local | `013_facturacion` (31: condiciones, permisos, XML, clave, numeración, reintentos, inmutabilidad, producción aparte) | **450/450 pasan** |
+| 2026-11-17 | pgTAP 024 (11) + Vitest `xlsx.test.ts` (3) + navegador local con un .xlsm hecho en Excel (hojas MENU, FRITOLAY y COCA-COLA, stock por fórmula) | Ignora el menú y la tabla de salidas; une el nombre en dos líneas; -4 queda en 0 bloqueado; detecta el repetido en otra hoja; con costo en 2 filas crea 6 productos, 2 con stock (7 y 12), categorías FRITOLAY y COCA-COLA, por completar; subir otra vez: 0 nuevos, 7 ya existen | **Funciona**; pgTAP 584/584, Vitest 65/65 |
 | 2026-11-14 | GitHub Actions, run 43633238671, commit `db7bd57`; Vercel; `db push` de 20261120 | CI completo | **Pasan todos los pasos**; Vercel publicó |
 | 2026-11-14 | pgTAP 023 (7) + navegador local | Con una línea vacía y otra a medias, las completas muestran su cuenta, la vacía dice «Línea vacía…», la otra «falta: bultos» y los totales avisan que no las cuentan. Aceite (hoy $3,45) a $4,00 en la calculadora: 12 × $4,00 = venta; en «Nueva compra» avisa el cambio y al registrar «Unidad» queda en $4,00 | **Funciona**; pgTAP 573/573, Vitest 62/62 |
 | 2026-11-14 | GitHub Actions, run 43629595408, commit `222a41d`; Vercel; `db push` de 20261119 | CI completo | **Pasan todos los pasos**; Vercel publicó |

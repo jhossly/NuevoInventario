@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 export type Ruta =
   | { nombre: 'productos' }
   | { nombre: 'producto-nuevo' }
+  | { nombre: 'productos-importar' }
   | { nombre: 'producto'; id: string }
   | { nombre: 'ajuste'; id: string }
   | { nombre: 'kardex'; id: string }
@@ -73,6 +74,7 @@ export function leerRuta(hash: string): Ruta {
   if (primera !== 'productos') return { nombre: 'no-encontrada' };
   if (segunda === undefined) return { nombre: 'productos' };
   if (segunda === 'nuevo' && tercera === undefined) return { nombre: 'producto-nuevo' };
+  if (segunda === 'importar' && tercera === undefined) return { nombre: 'productos-importar' };
   if (!UUID.test(segunda)) return { nombre: 'no-encontrada' };
   if (tercera === undefined) return { nombre: 'producto', id: segunda };
   if (tercera === 'ajuste') return { nombre: 'ajuste', id: segunda };
@@ -87,6 +89,8 @@ export function enlace(ruta: Ruta): string {
       return '#/productos';
     case 'producto-nuevo':
       return '#/productos/nuevo';
+    case 'productos-importar':
+      return '#/productos/importar';
     case 'producto':
       return `#/productos/${ruta.id}`;
     case 'ajuste':

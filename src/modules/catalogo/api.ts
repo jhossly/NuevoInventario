@@ -224,6 +224,30 @@ export function useGuardarProducto() {
   });
 }
 
+export interface FilaImportar {
+  nombre: string;
+  codigo: string | null;
+  categoria: string | null;
+  stock: string;
+  costo: string;
+}
+
+/** Crea los productos del Excel que no existen, con su stock si trae costo (D-071). */
+export function useImportarProductos() {
+  const queryClient = useQueryClient();
+  const invalidar = useInvalidarCatalogo();
+  return useMutation({
+    mutationFn: ({ filas, tarifa }: { filas: FilaImportar[]; tarifa: string }) =>
+      llamar(
+        'importar_productos',
+        { p_filas: filas, p_tarifa_iva: tarifa },
+        z.object({ creados: z.number(), con_stock: z.number(), existentes: z.number() }),
+      ),
+    onSuccess: () =>
+      Promise.all([invalidar(), queryClient.invalidateQueries({ queryKey: claves.categorias }), queryClient.invalidateQueries({ queryKey: ['inventario'] })]),
+  });
+}
+
 /** Ya se completó lo que faltaba de un producto creado desde una compra. */
 export function useMarcarRevisado() {
   const invalidar = useInvalidarCatalogo();

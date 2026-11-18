@@ -14,6 +14,7 @@ describe('leerRuta', () => {
     const rutas: Ruta[] = [
       { nombre: 'productos' },
       { nombre: 'producto-nuevo' },
+      { nombre: 'productos-importar' },
       { nombre: 'producto', id: ID },
       { nombre: 'ajuste', id: ID },
       { nombre: 'kardex', id: ID },

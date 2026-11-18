@@ -3,7 +3,7 @@ import { useContexto } from '@/modules/sesion/sesion';
 import { useValorizado } from '@/modules/inventario/api';
 import { formatearCantidad, formatearCosto, formatearDinero } from '@/shared/formato';
 import { enlace } from '@/shared/ruta';
-import { ClipboardCheck, Plus } from 'lucide-react';
+import { ClipboardCheck, FileSpreadsheet, Plus } from 'lucide-react';
 import { Aviso, AvisoError, Buscador, Cargando, Casilla, EnlaceBoton, Encabezado, Selector, Tarjeta } from '@/shared/ui';
 import { FotoProducto } from './FotoProducto';
 import {
@@ -71,6 +71,9 @@ export function ListaProductos() {
             <>
               <EnlaceBoton href={enlace({ nombre: 'conteo' })} icono={ClipboardCheck}>
                 Conteo
+              </EnlaceBoton>
+              <EnlaceBoton href={enlace({ nombre: 'productos-importar' })} icono={FileSpreadsheet}>
+                Importar Excel
               </EnlaceBoton>
               <EnlaceBoton href={enlace({ nombre: 'producto-nuevo' })} variante="primario" icono={Plus}>
                 Nuevo

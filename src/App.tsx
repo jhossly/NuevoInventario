@@ -3,6 +3,7 @@ import { DetalleCompra } from '@/modules/compras/DetalleCompra';
 import { ListaCompras } from '@/modules/compras/ListaCompras';
 import { ImportarCompra } from '@/modules/compras/ImportarCompra';
 import { CuantoGano } from '@/modules/compras/CuantoGano';
+import { ImportarProductos } from '@/modules/catalogo/ImportarProductos';
 import { NuevaCompra } from '@/modules/compras/NuevaCompra';
 import { Proveedores } from '@/modules/compras/Proveedores';
 import { Caja } from '@/modules/caja/Caja';
@@ -82,6 +83,8 @@ function Pantalla({ ruta, esDueno }: { ruta: Ruta; esDueno: boolean }) {
   switch (ruta.nombre) {
     case 'productos':
       return <ListaProductos />;
+    case 'productos-importar':
+      return soloDueno(<ImportarProductos />);
     case 'producto-nuevo':
       return soloDueno(
         <>
